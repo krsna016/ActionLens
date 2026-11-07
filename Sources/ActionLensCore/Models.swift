@@ -170,6 +170,59 @@ public struct HardwareSensorState: Codable {
     public init() {}
 }
 
+// MARK: - Polyline Trajectory & Geometric Vertices
+public struct TrajectoryPoint: Codable, Identifiable {
+    public var id: String { "\(x)_\(y)_\(timestampOffsetMs)" }
+    public let x: Double
+    public let y: Double
+    public let normalizedX: Double
+    public let normalizedY: Double
+    public let timestampOffsetMs: Double
+    public let pressure: Double
+    
+    public init(
+        x: Double,
+        y: Double,
+        normalizedX: Double,
+        normalizedY: Double,
+        timestampOffsetMs: Double = 0.0,
+        pressure: Double = 0.5
+    ) {
+        self.x = x
+        self.y = y
+        self.normalizedX = normalizedX
+        self.normalizedY = normalizedY
+        self.timestampOffsetMs = timestampOffsetMs
+        self.pressure = pressure
+    }
+}
+
+public struct TrajectoryVertex: Codable, Identifiable {
+    public var id: String { "\(vertexType)_\(x)_\(y)_\(angleDeg)" }
+    public let x: Double
+    public let y: Double
+    public let normalizedX: Double
+    public let normalizedY: Double
+    public let vertexType: String // e.g. "Apex Dip (U-Turn)", "Peak Crest", "Sharp Turn", "Inflection Point"
+    public let angleDeg: Double
+    
+    public init(
+        x: Double,
+        y: Double,
+        normalizedX: Double,
+        normalizedY: Double,
+        vertexType: String,
+        angleDeg: Double
+    ) {
+        self.x = x
+        self.y = y
+        self.normalizedX = normalizedX
+        self.normalizedY = normalizedY
+        self.vertexType = vertexType
+        self.angleDeg = angleDeg
+    }
+}
+
 public struct SwipeMetadata: Codable {
     public let startX: Double
     public let startY: Double
@@ -184,6 +237,9 @@ public struct SwipeMetadata: Codable {
     public let normalizedEndX: Double
     public let normalizedEndY: Double
     public let biometrics: TouchMicroBiometrics
+    public let pathPoints: [TrajectoryPoint]
+    public let vertices: [TrajectoryVertex]
+    public let gestureShape: String // "Linear Flick", "U-Shape Curve", "Inverted U / Arch", "V-Shape", "S-Curve", "Arc Sweep", "Zigzag Reversal"
     
     public init(
         startX: Double,
@@ -196,7 +252,10 @@ public struct SwipeMetadata: Codable {
         duration: Double,
         screenWidth: Double,
         screenHeight: Double,
-        biometrics: TouchMicroBiometrics = TouchMicroBiometrics()
+        biometrics: TouchMicroBiometrics = TouchMicroBiometrics(),
+        pathPoints: [TrajectoryPoint] = [],
+        vertices: [TrajectoryVertex] = [],
+        gestureShape: String = "Linear Swipe"
     ) {
         self.startX = startX
         self.startY = startY
@@ -211,6 +270,9 @@ public struct SwipeMetadata: Codable {
         self.normalizedEndX = min(max(endX / max(screenWidth, 1.0), 0.0), 1.0)
         self.normalizedEndY = min(max(endY / max(screenHeight, 1.0), 0.0), 1.0)
         self.biometrics = biometrics
+        self.pathPoints = pathPoints
+        self.vertices = vertices
+        self.gestureShape = gestureShape
     }
 }
 

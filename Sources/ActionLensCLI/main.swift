@@ -202,7 +202,12 @@ func runLiveStream(filterTarget: DeviceTarget?, verbose: Bool) {
                 print("[\(time)] \(devTag) \(appTag) \u{001B}[1m\(rec.narrativeEnglish)\u{001B}[0m")
                 
                 if let swipe = rec.swipeMetadata {
-                    print("  \u{001B}[90m└─ Vector: \(swipe.direction.rawValue) | Dist: \(Int(swipe.distance))px | Vel: \(Int(swipe.velocity))px/s | Start: (\(Int(swipe.startX)), \(Int(swipe.startY))) → End: (\(Int(swipe.endX)), \(Int(swipe.endY)))\u{001B}[0m")
+                    print("  \u{001B}[90m└─ Shape: [\(swipe.gestureShape)] | Vector: \(swipe.direction.rawValue) | Dist: \(Int(swipe.distance))px | Vel: \(Int(swipe.velocity))px/s | Points: \(swipe.pathPoints.count)\u{001B}[0m")
+                    if !swipe.vertices.isEmpty {
+                        for (idx, v) in swipe.vertices.enumerated() {
+                            print("  \u{001B}[33m   ├─ Vertex #\(idx + 1): \(v.vertexType) at (\(Int(v.x)), \(Int(v.y))) [Turn: \(String(format: "%.1f°", v.angleDeg))]\u{001B}[0m")
+                        }
+                    }
                     let bio = swipe.biometrics
                     print(String(format: "  \u{001B}[35m└─ Bio [4-6]: Force: %.0f%% | Area: %.1fmm² (%@) | Arc: %.1f° | Jitter: %.1fpx\u{001B}[0m", bio.pressure * 100, bio.surfaceAreaMm2, bio.postureHeuristic, bio.curvatureArcDeg, bio.jitterPx))
                 } else if let click = rec.clickMetadata {

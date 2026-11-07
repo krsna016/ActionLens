@@ -49,6 +49,8 @@ public class SessionManager: ObservableObject {
     @Published public var appCounts: [String: Int] = [:]
     @Published public var clickPings: [ClickPing] = []
     @Published public var phoneSwipesList: [SwipeMetadata] = []
+    @Published public var livePhoneTrail: [TrajectoryPoint] = []
+    @Published public var isPhoneTouching: Bool = false
     
     // Multi-Device Switcher State ("Mac", "Phone", "Unified")
     @Published public var activeDeviceView: String = "Unified"
@@ -125,6 +127,13 @@ public class SessionManager: ObservableObject {
                 }
             }
         )
+        
+        self.phoneTracker?.onLiveTrailUpdate = { [weak self] trail, isTouching in
+            DispatchQueue.main.async {
+                self?.isPhoneTouching = isTouching
+                self?.livePhoneTrail = trail
+            }
+        }
         
         // 45 Granular Telemetry Vectors Engine
         HardwareSensorTelemetry.shared.onUpdate = { [weak self] state in

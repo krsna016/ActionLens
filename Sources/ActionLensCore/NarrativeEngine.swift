@@ -109,6 +109,23 @@ public class NarrativeEngine {
         let hesitationTag = bio.isHesitationReversal ? " | Hesitation Reversal" : ""
         let bioTag = " [Arc: \(arcStr) | Jitter: ±\(jitterStr) | \(bio.postureHeuristic)\(hesitationTag)]"
         
+        // Complex Trajectory Geometry Narration
+        if swipe.gestureShape == "U-Shape Curve" {
+            let vertexDesc = swipe.vertices.first.map { " (apex dip at (\(Int($0.x)), \(Int($0.y))))" } ?? ""
+            return "On your \(phoneTag), you traced a U-Shape Curve\(vertexDesc) spanning \(dist) px at ~\(vel) px/s\(bioTag) inside \(app)."
+        } else if swipe.gestureShape == "Inverted U / Arch" {
+            let vertexDesc = swipe.vertices.first.map { " (peak crest at (\(Int($0.x)), \(Int($0.y))))" } ?? ""
+            return "On your \(phoneTag), you swept an Arch Curve\(vertexDesc) spanning \(dist) px at ~\(vel) px/s\(bioTag) inside \(app)."
+        } else if swipe.gestureShape == "V-Shape Flick" {
+            let vertexDesc = swipe.vertices.first.map { " (corner vertex at (\(Int($0.x)), \(Int($0.y))))" } ?? ""
+            return "On your \(phoneTag), you executed a sharp V-Shape gesture\(vertexDesc) spanning \(dist) px\(bioTag) in \(app)."
+        } else if swipe.gestureShape == "S-Curve / Zigzag" {
+            return "On your \(phoneTag), you drew an S-Curve / Zigzag trajectory across \(swipe.vertices.count) vertices (\(dist) px)\(bioTag) in \(app)."
+        } else if swipe.gestureShape == "Curved Sweep" && !swipe.vertices.isEmpty {
+            let vertexDesc = swipe.vertices.first.map { " with inflection at (\(Int($0.x)), \(Int($0.y)))" } ?? ""
+            return "On your \(phoneTag), you performed a curved gesture\(vertexDesc) spanning \(dist) px at ~\(vel) px/s\(bioTag) in \(app)."
+        }
+        
         switch swipe.direction {
         case .up:
             return "On your \(phoneTag), you performed an upward swipe (\(dist) px at ~\(vel) px/s)\(bioTag) to scroll down your feed in \(app)."

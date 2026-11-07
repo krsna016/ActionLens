@@ -35,9 +35,12 @@ public class PhoneTracker {
     private var currentTouchMajor: Double = 26.0
     private var currentTouchMinor: Double = 21.0
     private var lastTouchEndTime: Date = Date()
-    private var trajectoryPoints: [(x: Double, y: Double, t: Date)] = []
+    private var trajectoryPoints: [(x: Double, y: Double, t: Date, p: Double)] = []
     private var hesitationSignChanges: Int = 0
     private var lastVelocityY: Double = 0.0
+    private var lastLiveTrailDispatch: Date = Date.distantPast
+    
+    public var onLiveTrailUpdate: (([TrajectoryPoint], Bool) -> Void)?
     
     private var appCheckTimer: Timer?
     private var reconnectTimer: DispatchSourceTimer?
@@ -406,10 +409,36 @@ public class PhoneTracker {
                     hesitationSignChanges += 1
                 }
                 lastVelocityY = vy
-                trajectoryPoints.append((x: x, y: y, t: now))
+                trajectoryPoints.append((x: x, y: y, t: now, p: currentPressure))
+                dispatchLiveTrail(isTouching: true)
             }
         } else {
-            trajectoryPoints.append((x: x, y: y, t: now))
+            trajectoryPoints.append((x: x, y: y, t: now, p: currentPressure))
+            dispatchLiveTrail(isTouching: true)
+        }
+    }
+    
+    private func dispatchLiveTrail(isTouching: Bool) {
+        guard let handler = onLiveTrailUpdate else { return }
+        let now = Date()
+        if !isTouching || now.timeIntervalSince(lastLiveTrailDispatch) >= 0.016 { // ~60fps
+            lastLiveTrailDispatch = now
+            let sw = max(screenWidth, 1.0)
+            let sh = max(screenHeight, 1.0)
+            let t0 = touchStartTime
+            let pts = trajectoryPoints.map { pt in
+                TrajectoryPoint(
+                    x: pt.x,
+                    y: pt.y,
+                    normalizedX: min(max(pt.x / sw, 0.0), 1.0),
+                    normalizedY: min(max(pt.y / sh, 0.0), 1.0),
+                    timestampOffsetMs: pt.t.timeIntervalSince(t0) * 1000.0,
+                    pressure: pt.p
+                )
+            }
+            DispatchQueue.main.async {
+                handler(pts, isTouching)
+            }
         }
     }
     
@@ -419,14 +448,200 @@ public class PhoneTracker {
         touchStartX = (currentRawX / touchMaxX) * screenWidth
         touchStartY = (currentRawY / touchMaxY) * screenHeight
         touchStartTime = Date()
-        trajectoryPoints = [(x: touchStartX, y: touchStartY, t: touchStartTime)]
+        trajectoryPoints = [(x: touchStartX, y: touchStartY, t: touchStartTime, p: currentPressure)]
         hesitationSignChanges = 0
         lastVelocityY = 0.0
+        dispatchLiveTrail(isTouching: true)
+    }
+    
+    // MARK: - Advanced Geometric Vertex & Polyline Trajectory Analysis
+    public struct TrajectoryAnalysis {
+        public let pathPoints: [TrajectoryPoint]
+        public let vertices: [TrajectoryVertex]
+        public let gestureShape: String
+        
+        public init(pathPoints: [TrajectoryPoint], vertices: [TrajectoryVertex], gestureShape: String) {
+            self.pathPoints = pathPoints
+            self.vertices = vertices
+            self.gestureShape = gestureShape
+        }
+    }
+    
+    private func analyzeTrajectory() -> TrajectoryAnalysis {
+        guard !trajectoryPoints.isEmpty else {
+            return TrajectoryAnalysis(pathPoints: [], vertices: [], gestureShape: "Linear Swipe")
+        }
+        
+        let t0 = trajectoryPoints.first?.t ?? Date()
+        let sw = max(screenWidth, 1.0)
+        let sh = max(screenHeight, 1.0)
+        
+        let fullPath: [TrajectoryPoint] = trajectoryPoints.map { pt in
+            TrajectoryPoint(
+                x: pt.x,
+                y: pt.y,
+                normalizedX: min(max(pt.x / sw, 0.0), 1.0),
+                normalizedY: min(max(pt.y / sh, 0.0), 1.0),
+                timestampOffsetMs: pt.t.timeIntervalSince(t0) * 1000.0,
+                pressure: pt.p
+            )
+        }
+        
+        if fullPath.count < 3 {
+            return TrajectoryAnalysis(pathPoints: fullPath, vertices: [], gestureShape: "Linear Swipe")
+        }
+        
+        // 1. Subsample points with minimum spatial distance (12px) to filter sensor quantization jitter
+        var filtered: [TrajectoryPoint] = [fullPath[0]]
+        for pt in fullPath.dropFirst() {
+            let last = filtered.last!
+            let dist = hypot(pt.x - last.x, pt.y - last.y)
+            if dist >= 12.0 {
+                filtered.append(pt)
+            }
+        }
+        if let lastPt = fullPath.last, hypot(filtered.last!.x - lastPt.x, filtered.last!.y - lastPt.y) > 4.0 {
+            filtered.append(lastPt)
+        }
+        
+        var detectedVertices: [TrajectoryVertex] = []
+        
+        // 2. Scan for Local Extrema in Y (Apex Dips and Peak Crests)
+        // Screen coordinates: Y=0 at top, Y increases downwards.
+        // A U-shaped swipe curves downward and then climbs back up towards the top.
+        // Thus, the bottom apex has maximum Y!
+        let startY = fullPath.first!.y
+        let endY = fullPath.last!.y
+        
+        var maxY = -Double.infinity
+        var maxIdx = -1
+        var minY = Double.infinity
+        var minIdx = -1
+        
+        for (i, pt) in filtered.enumerated() {
+            if pt.y > maxY {
+                maxY = pt.y
+                maxIdx = i
+            }
+            if pt.y < minY {
+                minY = pt.y
+                minIdx = i
+            }
+        }
+        
+        // U-Shape (Apex Dip): Bottom apex is >= 45px below both start and end
+        let dipDepthFromStart = maxY - startY
+        let dipDepthFromEnd = maxY - endY
+        let isUShape = dipDepthFromStart >= 45.0 && dipDepthFromEnd >= 45.0 && maxIdx > 0 && maxIdx < (filtered.count - 1)
+        
+        // Arch / Inverted U: Top crest is >= 45px above both start and end (minY is smaller)
+        let crestRiseFromStart = startY - minY
+        let crestRiseFromEnd = endY - minY
+        let isArchShape = crestRiseFromStart >= 45.0 && crestRiseFromEnd >= 45.0 && minIdx > 0 && minIdx < (filtered.count - 1)
+        
+        if isUShape {
+            let apex = filtered[maxIdx]
+            detectedVertices.append(
+                TrajectoryVertex(
+                    x: apex.x,
+                    y: apex.y,
+                    normalizedX: apex.normalizedX,
+                    normalizedY: apex.normalizedY,
+                    vertexType: "Apex Dip (U-Turn)",
+                    angleDeg: 180.0
+                )
+            )
+        } else if isArchShape {
+            let crest = filtered[minIdx]
+            detectedVertices.append(
+                TrajectoryVertex(
+                    x: crest.x,
+                    y: crest.y,
+                    normalizedX: crest.normalizedX,
+                    normalizedY: crest.normalizedY,
+                    vertexType: "Peak Crest (Arch)",
+                    angleDeg: 180.0
+                )
+            )
+        }
+        
+        // 3. Scan for Angular Turning Vertices (Discrete Curvature & Directional Bends)
+        if filtered.count >= 3 {
+            for i in 1..<(filtered.count - 1) {
+                let pPrev = filtered[i - 1]
+                let pCurr = filtered[i]
+                let pNext = filtered[i + 1]
+                
+                let v1x = pCurr.x - pPrev.x
+                let v1y = pCurr.y - pPrev.y
+                let v2x = pNext.x - pCurr.x
+                let v2y = pNext.y - pCurr.y
+                
+                let mag1 = hypot(v1x, v1y)
+                let mag2 = hypot(v2x, v2y)
+                
+                if mag1 > 8.0 && mag2 > 8.0 {
+                    let dot = (v1x * v2x + v1y * v2y) / (mag1 * mag2)
+                    let clampedDot = min(max(dot, -1.0), 1.0)
+                    let angleDeg = acos(clampedDot) * 180.0 / Double.pi
+                    
+                    if angleDeg >= 36.0 {
+                        // Avoid duplicates if near an existing vertex
+                        let alreadyCovered = detectedVertices.contains { v in
+                            hypot(v.x - pCurr.x, v.y - pCurr.y) < 32.0
+                        }
+                        
+                        if !alreadyCovered {
+                            let vType: String
+                            if angleDeg >= 120.0 {
+                                vType = "V-Shape Reversal"
+                            } else if angleDeg >= 65.0 {
+                                vType = "Corner Vertex"
+                            } else {
+                                vType = "Inflection Point"
+                            }
+                            
+                            detectedVertices.append(
+                                TrajectoryVertex(
+                                    x: pCurr.x,
+                                    y: pCurr.y,
+                                    normalizedX: pCurr.normalizedX,
+                                    normalizedY: pCurr.normalizedY,
+                                    vertexType: vType,
+                                    angleDeg: angleDeg
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 4. Gesture Shape Classification
+        let shape: String
+        if isUShape {
+            shape = "U-Shape Curve"
+        } else if isArchShape {
+            shape = "Inverted U / Arch"
+        } else if detectedVertices.count >= 2 {
+            shape = "S-Curve / Zigzag"
+        } else if detectedVertices.contains(where: { $0.angleDeg >= 110.0 }) {
+            shape = "V-Shape Flick"
+        } else if detectedVertices.count == 1 {
+            shape = "Curved Sweep"
+        } else if hesitationSignChanges > 0 {
+            shape = "Hesitation Reversal"
+        } else {
+            shape = "Linear Swipe"
+        }
+        
+        return TrajectoryAnalysis(pathPoints: fullPath, vertices: detectedVertices, gestureShape: shape)
     }
     
     private func handleTouchEnd() {
         isTouching = false
         hasInitialCoords = false
+        dispatchLiveTrail(isTouching: false)
         
         let endX = (currentRawX / touchMaxX) * screenWidth
         let endY = (currentRawY / touchMaxY) * screenHeight
@@ -486,8 +701,9 @@ public class PhoneTracker {
         
         let app = currentPhoneApp
         let hardwareSnapshot = HardwareSensorTelemetry.shared.currentState
+        let trajectoryAnalysis = analyzeTrajectory()
         
-        if distance < 60.0 {
+        if distance < 60.0 && trajectoryAnalysis.gestureShape == "Linear Swipe" {
             // Direct Tap or Long Press
             let isLongPress = duration > 0.45
             let narrative = NarrativeEngine.shared.narratePhoneTap(
@@ -531,7 +747,7 @@ public class PhoneTracker {
                 self?.onAction(record)
             }
         } else {
-            // Directional Swipe
+            // Directional or Curved Gesture Swipe
             let direction: SwipeDirection
             if abs(dy) > abs(dx) {
                 direction = dy < 0 ? .up : .down
@@ -550,7 +766,10 @@ public class PhoneTracker {
                 duration: duration,
                 screenWidth: screenWidth,
                 screenHeight: screenHeight,
-                biometrics: touchBio
+                biometrics: touchBio,
+                pathPoints: trajectoryAnalysis.pathPoints,
+                vertices: trajectoryAnalysis.vertices,
+                gestureShape: trajectoryAnalysis.gestureShape
             )
             
             let narrative = NarrativeEngine.shared.narratePhoneSwipe(

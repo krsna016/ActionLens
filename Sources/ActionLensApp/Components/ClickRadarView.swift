@@ -142,31 +142,118 @@ public struct ClickRadarView: View {
                     .position(x: px, y: py)
                 }
                 
-                // Phone Swipes (Vectors with Arrows)
+                // Active Live Drawing Trail (real-time finger touch rendering)
+                if manager.isPhoneTouching && manager.livePhoneTrail.count >= 2 {
+                    Path { p in
+                        let f = manager.livePhoneTrail[0]
+                        p.move(to: CGPoint(x: offsetX + CGFloat(f.normalizedX) * frameW, y: offsetY + CGFloat(f.normalizedY) * frameH))
+                        for pt in manager.livePhoneTrail.dropFirst() {
+                            p.addLine(to: CGPoint(x: offsetX + CGFloat(pt.normalizedX) * frameW, y: offsetY + CGFloat(pt.normalizedY) * frameH))
+                        }
+                    }
+                    .stroke(
+                        ActionLensTheme.mintAccent,
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+                    )
+                    .shadow(color: ActionLensTheme.mintAccent.opacity(0.8), radius: 6)
+                    
+                    if let tip = manager.livePhoneTrail.last {
+                        let tipX = offsetX + CGFloat(tip.normalizedX) * frameW
+                        let tipY = offsetY + CGFloat(tip.normalizedY) * frameH
+                        ZStack {
+                            Circle()
+                                .stroke(ActionLensTheme.mintAccent.opacity(0.8), lineWidth: 1.5)
+                                .frame(width: 18, height: 18)
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: ActionLensTheme.mintAccent, radius: 8)
+                        }
+                        .position(x: tipX, y: tipY)
+                    }
+                }
+                
+                // Phone Swipes & Complex Curves (U-Shapes, Arcs, Vertices)
                 ForEach(Array(manager.phoneSwipesList.suffix(6).enumerated()), id: \.offset) { _, swipe in
                     let sx = offsetX + CGFloat(swipe.normalizedStartX) * frameW
                     let sy = offsetY + CGFloat(swipe.normalizedStartY) * frameH
                     let ex = offsetX + CGFloat(swipe.normalizedEndX) * frameW
                     let ey = offsetY + CGFloat(swipe.normalizedEndY) * frameH
                     
-                    Path { p in
-                        p.move(to: CGPoint(x: sx, y: sy))
-                        p.addLine(to: CGPoint(x: ex, y: ey))
+                    // Polyline Trajectory Path (Curves, U-Turns, Zigzags)
+                    if swipe.pathPoints.count >= 2 {
+                        Path { p in
+                            let f = swipe.pathPoints[0]
+                            p.move(to: CGPoint(x: offsetX + CGFloat(f.normalizedX) * frameW, y: offsetY + CGFloat(f.normalizedY) * frameH))
+                            for pt in swipe.pathPoints.dropFirst() {
+                                p.addLine(to: CGPoint(x: offsetX + CGFloat(pt.normalizedX) * frameW, y: offsetY + CGFloat(pt.normalizedY) * frameH))
+                            }
+                        }
+                        .stroke(
+                            LinearGradient(
+                                colors: [ActionLensTheme.cyanAccent, ActionLensTheme.purpleAccent, ActionLensTheme.amberAccent],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                        )
+                        .shadow(color: ActionLensTheme.cyanAccent.opacity(0.4), radius: 3)
+                    } else {
+                        Path { p in
+                            p.move(to: CGPoint(x: sx, y: sy))
+                            p.addLine(to: CGPoint(x: ex, y: ey))
+                        }
+                        .stroke(
+                            LinearGradient(
+                                colors: [ActionLensTheme.cyanAccent, ActionLensTheme.amberAccent],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 2])
+                        )
                     }
-                    .stroke(
-                        LinearGradient(
-                            colors: [ActionLensTheme.cyanAccent, ActionLensTheme.amberAccent],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 2])
-                    )
                     
-                    // Arrowhead end dot
+                    // Start Origin Dot
+                    Circle()
+                        .fill(ActionLensTheme.cyanAccent)
+                        .frame(width: 6, height: 6)
+                        .position(x: sx, y: sy)
+                    
+                    // Arrowhead / Terminal Dot
                     Circle()
                         .fill(ActionLensTheme.amberAccent)
-                        .frame(width: 7, height: 7)
+                        .frame(width: 8, height: 8)
+                        .shadow(color: ActionLensTheme.amberAccent.opacity(0.6), radius: 4)
                         .position(x: ex, y: ey)
+                    
+                    // Detected Geometric Vertices (Apex Dips, Peak Crests, Inflections)
+                    ForEach(swipe.vertices) { vertex in
+                        let vx = offsetX + CGFloat(vertex.normalizedX) * frameW
+                        let vy = offsetY + CGFloat(vertex.normalizedY) * frameH
+                        
+                        ZStack {
+                            Rectangle()
+                                .stroke(ActionLensTheme.amberAccent, lineWidth: 1.5)
+                                .rotationEffect(.degrees(45))
+                                .frame(width: 9, height: 9)
+                            Circle()
+                                .fill(ActionLensTheme.coralAccent)
+                                .frame(width: 4, height: 4)
+                            
+                            Text(vertex.vertexType.contains("Apex") ? "APEX DIP" : (vertex.vertexType.contains("Crest") ? "CREST" : "VERTEX"))
+                                .font(.system(size: 7, weight: .black, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.amberAccent)
+                                .padding(.horizontal, 3)
+                                .padding(.vertical, 1)
+                                .background(Color.black.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .stroke(ActionLensTheme.amberAccent.opacity(0.6), lineWidth: 0.6)
+                                )
+                                .offset(y: vertex.vertexType.contains("Apex") ? 12 : -12)
+                        }
+                        .position(x: vx, y: vy)
+                    }
                 }
                 
                 if manager.totalPhoneTaps == 0 && manager.totalPhoneSwipes == 0 {
@@ -211,12 +298,21 @@ public struct ClickRadarView: View {
                                 .foregroundColor(record.deviceTarget == .phone ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
                             
                             if let swipe = record.swipeMetadata {
-                                Image(systemName: swipe.direction.icon)
+                                Image(systemName: swipe.gestureShape.contains("U-Shape") ? "arrow.triangle.swap" : swipe.direction.icon)
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(ActionLensTheme.amberAccent)
-                                Text(swipe.direction.rawValue)
+                                Text(swipe.gestureShape != "Linear Swipe" ? swipe.gestureShape : swipe.direction.rawValue)
                                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.amberAccent)
+                                if !swipe.vertices.isEmpty {
+                                    Text("[\(swipe.vertices.count)v]")
+                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .foregroundColor(ActionLensTheme.mintAccent)
+                                        .padding(.horizontal, 3)
+                                        .padding(.vertical, 0.5)
+                                        .background(ActionLensTheme.mintAccent.opacity(0.15))
+                                        .cornerRadius(2)
+                                }
                                 Text("(\(Int(swipe.distance))px)")
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.textSecondary)
