@@ -1,0 +1,169 @@
+import SwiftUI
+import ActionLensCore
+
+public struct KeystrokeTelemetryView: View {
+    @ObservedObject var manager: SessionManager
+    
+    public init(manager: SessionManager) {
+        self.manager = manager
+    }
+    
+    public var body: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                Label("KEYSTROKE INFERENCE & TELEMETRY", systemImage: "speedometer")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.amberAccent)
+                
+                Spacer()
+                
+                Text(manager.currentFlowState.rawValue)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(hex: manager.currentFlowState.badgeColorHex))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color(hex: manager.currentFlowState.badgeColorHex).opacity(0.15))
+                    .cornerRadius(6)
+            }
+            .padding(.horizontal, 4)
+            
+            // Speedometer HUD Card
+            HStack(spacing: 20) {
+                // Large WPM indicator
+                VStack(spacing: 4) {
+                    Text("\(Int(manager.currentWPM))")
+                        .font(.system(size: 44, weight: .black, design: .rounded))
+                        .foregroundColor(ActionLensTheme.amberAccent)
+                    
+                    Text("CURRENT WPM")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.textSecondary)
+                }
+                .frame(width: 120)
+                
+                // Live Cadence Level Bar
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("CADENCE VELOCITY")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textSecondary)
+                        Spacer()
+                        Text("\(Int(min(manager.currentWPM / 120.0 * 100.0, 100.0)))%")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.black.opacity(0.5))
+                                .frame(height: 12)
+                            
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [ActionLensTheme.cyanAccent, ActionLensTheme.mintAccent, ActionLensTheme.amberAccent, ActionLensTheme.coralAccent],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: geo.size.width * min(CGFloat(manager.currentWPM / 120.0), 1.0), height: 12)
+                        }
+                    }
+                    .frame(height: 12)
+                    
+                    HStack {
+                        Text("Thoughtful")
+                        Spacer()
+                        Text("Steady (60)")
+                        Spacer()
+                        Text("Deep Flow (80+)")
+                    }
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.textTertiary)
+                }
+            }
+            .padding(14)
+            .background(ActionLensTheme.cardBackground)
+            .cornerRadius(10)
+            
+            // Application Locus of Attention
+            VStack(alignment: .leading, spacing: 10) {
+                Text("APPLICATION FOCUS DISTRIBUTION")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.textSecondary)
+                
+                let totalActions = max(manager.records.count, 1)
+                let sortedApps = manager.appCounts.sorted { $0.value > $1.value }.prefix(4)
+                
+                VStack(spacing: 8) {
+                    ForEach(Array(sortedApps), id: \.key) { app, count in
+                        let pct = Double(count) / Double(totalActions)
+                        VStack(spacing: 3) {
+                            HStack {
+                                Text(app)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(ActionLensTheme.textPrimary)
+                                Spacer()
+                                Text("\(count) ops (\(Int(pct * 100))%)")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(ActionLensTheme.textSecondary)
+                            }
+                            
+                            GeometryReader { g in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color.white.opacity(0.06))
+                                        .frame(height: 6)
+                                    
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(ActionLensTheme.purpleAccent)
+                                        .frame(width: g.size.width * CGFloat(pct), height: 6)
+                                }
+                            }
+                            .frame(height: 6)
+                        }
+                    }
+                }
+            }
+            .padding(14)
+            .background(ActionLensTheme.cardBackground)
+            .cornerRadius(10)
+        }
+        .padding(16)
+        .background(ActionLensTheme.panelBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ActionLensTheme.border, lineWidth: 1)
+        )
+    }
+}
+
+// Hex color extension helper
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
+        }
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
+    }
+}
