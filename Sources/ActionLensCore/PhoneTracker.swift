@@ -382,8 +382,14 @@ public class PhoneTracker {
                     hasInitialCoords = true
                     touchStartX = px
                     touchStartY = py
+                    touchStartTime = Date()
+                    trajectoryPoints = [(x: px, y: py, t: touchStartTime, p: currentPressure)]
+                    hesitationSignChanges = 0
+                    lastVelocityY = 0.0
+                    dispatchLiveTrail(isTouching: true)
+                } else {
+                    recordTrajectoryPoint(x: px, y: py)
                 }
-                recordTrajectoryPoint(x: px, y: py)
             }
         }
     }
@@ -439,13 +445,10 @@ public class PhoneTracker {
     private func handleTouchStart() {
         isTouching = true
         hasInitialCoords = false
-        touchStartX = (currentRawX / touchMaxX) * screenWidth
-        touchStartY = (currentRawY / touchMaxY) * screenHeight
         touchStartTime = Date()
-        trajectoryPoints = [(x: touchStartX, y: touchStartY, t: touchStartTime, p: currentPressure)]
+        trajectoryPoints.removeAll(keepingCapacity: true)
         hesitationSignChanges = 0
         lastVelocityY = 0.0
-        dispatchLiveTrail(isTouching: true)
     }
     
     // MARK: - Advanced Geometric Vertex & Polyline Trajectory Analysis
@@ -678,17 +681,22 @@ public class PhoneTracker {
     }
     
     private func handleTouchEnd() {
+        guard isTouching else { return }
         isTouching = false
         hasInitialCoords = false
         dispatchLiveTrail(isTouching: false)
         
-        let endX = (currentRawX / touchMaxX) * screenWidth
-        let endY = (currentRawY / touchMaxY) * screenHeight
+        guard !trajectoryPoints.isEmpty else { return }
+        
+        let startX = trajectoryPoints.first!.x
+        let startY = trajectoryPoints.first!.y
+        let endX = trajectoryPoints.last!.x
+        let endY = trajectoryPoints.last!.y
         let now = Date()
         let duration = max(now.timeIntervalSince(touchStartTime), 0.04)
         
-        let dx = endX - touchStartX
-        let dy = endY - touchStartY
+        let dx = endX - startX
+        let dy = endY - startY
         let distance = sqrt(dx * dx + dy * dy)
         let velocity = distance / duration
         
@@ -712,7 +720,7 @@ public class PhoneTracker {
             var maxPerp = 0.0
             var sumPerpSq = 0.0
             for pt in trajectoryPoints {
-                let num = abs((endY - touchStartY) * pt.x - (endX - touchStartX) * pt.y + endX * touchStartY - endY * touchStartX)
+                let num = abs((endY - startY) * pt.x - (endX - startX) * pt.y + endX * startY - endY * startX)
                 let perp = num / chordLen
                 if perp > maxPerp { maxPerp = perp }
                 sumPerpSq += (perp * perp)
@@ -808,8 +816,8 @@ public class PhoneTracker {
             }
             
             let swipe = SwipeMetadata(
-                startX: touchStartX,
-                startY: touchStartY,
+                startX: startX,
+                startY: startY,
                 endX: endX,
                 endY: endY,
                 direction: direction,
