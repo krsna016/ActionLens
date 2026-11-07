@@ -73,6 +73,54 @@ public struct ClickRadarView: View {
             }
             .padding(.horizontal, 4)
             
+            // Swipe Style Switcher (Switch between Earlier Linear Vector and Current Polyline Curve)
+            if isPhoneCanvas {
+                HStack(spacing: 6) {
+                    Text("SWIPE STYLE:")
+                        .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.textTertiary)
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.swipeRenderStyle = "Polyline Curve"
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+                            Text("Curve & Vertex (Current)")
+                        }
+                        .font(.system(size: 9, weight: manager.swipeRenderStyle == "Polyline Curve" ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(manager.swipeRenderStyle == "Polyline Curve" ? ActionLensTheme.amberAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(manager.swipeRenderStyle == "Polyline Curve" ? ActionLensTheme.amberAccent.opacity(0.18) : Color.white.opacity(0.04))
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.swipeRenderStyle = "Linear Vector"
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.right")
+                            Text("Linear Vector (Earlier)")
+                        }
+                        .font(.system(size: 9, weight: manager.swipeRenderStyle == "Linear Vector" ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(manager.swipeRenderStyle == "Linear Vector" ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(manager.swipeRenderStyle == "Linear Vector" ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
+            }
+            
             // Screen Radar Canvas (Switches between Mac widescreen and Phone portrait mockup)
             if isPhoneCanvas {
                 phoneRadarCanvas
@@ -210,15 +258,15 @@ public struct ClickRadarView: View {
                     }
                 }
                 
-                // Phone Swipes & Complex Curves (U-Shapes, Arcs, Vertices)
+                // Phone Swipes (Dynamically toggled between Polyline Curve and Linear Vector styles)
                 ForEach(manager.phoneSwipesList.suffix(8)) { swipe in
                     let sx = offsetX + CGFloat(swipe.normalizedStartX) * frameW
                     let sy = offsetY + CGFloat(swipe.normalizedStartY) * frameH
                     let ex = offsetX + CGFloat(swipe.normalizedEndX) * frameW
                     let ey = offsetY + CGFloat(swipe.normalizedEndY) * frameH
                     
-                    // Polyline Trajectory Path (Curves, U-Turns, Zigzags)
-                    if swipe.pathPoints.count >= 2 {
+                    if manager.swipeRenderStyle == "Polyline Curve" && swipe.pathPoints.count >= 2 {
+                        // Current Style: Continuous Polyline Curves + Vertices
                         Path { p in
                             let f = swipe.pathPoints[0]
                             p.move(to: CGPoint(x: offsetX + CGFloat(f.normalizedX) * frameW, y: offsetY + CGFloat(f.normalizedY) * frameH))
@@ -235,7 +283,50 @@ public struct ClickRadarView: View {
                             style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round)
                         )
                         .shadow(color: ActionLensTheme.cyanAccent.opacity(0.6), radius: 4)
+                        
+                        // Start Origin Dot
+                        Circle()
+                            .fill(ActionLensTheme.cyanAccent)
+                            .frame(width: 6, height: 6)
+                            .position(x: sx, y: sy)
+                        
+                        // Arrowhead / Terminal Dot
+                        Circle()
+                            .fill(ActionLensTheme.amberAccent)
+                            .frame(width: 8, height: 8)
+                            .shadow(color: ActionLensTheme.amberAccent.opacity(0.6), radius: 4)
+                            .position(x: ex, y: ey)
+                        
+                        // Detected Geometric Vertices (Apex Dips, Peak Crests, Inflections)
+                        ForEach(swipe.vertices) { vertex in
+                            let vx = offsetX + CGFloat(vertex.normalizedX) * frameW
+                            let vy = offsetY + CGFloat(vertex.normalizedY) * frameH
+                            
+                            ZStack {
+                                Rectangle()
+                                    .stroke(ActionLensTheme.amberAccent, lineWidth: 1.5)
+                                    .rotationEffect(.degrees(45))
+                                    .frame(width: 9, height: 9)
+                                Circle()
+                                    .fill(ActionLensTheme.coralAccent)
+                                    .frame(width: 4, height: 4)
+                                
+                                Text(vertex.vertexType.contains("Apex") ? "APEX DIP" : (vertex.vertexType.contains("Crest") ? "CREST" : "VERTEX"))
+                                    .font(.system(size: 7, weight: .black, design: .monospaced))
+                                    .foregroundColor(ActionLensTheme.amberAccent)
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 1)
+                                    .background(Color.black.opacity(0.85))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .stroke(ActionLensTheme.amberAccent.opacity(0.6), lineWidth: 0.6)
+                                    )
+                                    .offset(y: vertex.vertexType.contains("Apex") ? 12 : -12)
+                            }
+                            .position(x: vx, y: vy)
+                        }
                     } else {
+                        // Earlier Style: Clean Linear Dashed Vector with Terminal Arrow
                         Path { p in
                             p.move(to: CGPoint(x: sx, y: sy))
                             p.addLine(to: CGPoint(x: ex, y: ey))
@@ -246,50 +337,20 @@ public struct ClickRadarView: View {
                                 startPoint: .leading,
                                 endPoint: .trailing
                             ),
-                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [4, 2])
+                            style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 2])
                         )
-                    }
-                    
-                    // Start Origin Dot
-                    Circle()
-                        .fill(ActionLensTheme.cyanAccent)
-                        .frame(width: 6, height: 6)
-                        .position(x: sx, y: sy)
-                    
-                    // Arrowhead / Terminal Dot
-                    Circle()
-                        .fill(ActionLensTheme.amberAccent)
-                        .frame(width: 8, height: 8)
-                        .shadow(color: ActionLensTheme.amberAccent.opacity(0.6), radius: 4)
-                        .position(x: ex, y: ey)
-                    
-                    // Detected Geometric Vertices (Apex Dips, Peak Crests, Inflections)
-                    ForEach(swipe.vertices) { vertex in
-                        let vx = offsetX + CGFloat(vertex.normalizedX) * frameW
-                        let vy = offsetY + CGFloat(vertex.normalizedY) * frameH
                         
-                        ZStack {
-                            Rectangle()
-                                .stroke(ActionLensTheme.amberAccent, lineWidth: 1.5)
-                                .rotationEffect(.degrees(45))
-                                .frame(width: 9, height: 9)
-                            Circle()
-                                .fill(ActionLensTheme.coralAccent)
-                                .frame(width: 4, height: 4)
-                            
-                            Text(vertex.vertexType.contains("Apex") ? "APEX DIP" : (vertex.vertexType.contains("Crest") ? "CREST" : "VERTEX"))
-                                .font(.system(size: 7, weight: .black, design: .monospaced))
-                                .foregroundColor(ActionLensTheme.amberAccent)
-                                .padding(.horizontal, 3)
-                                .padding(.vertical, 1)
-                                .background(Color.black.opacity(0.85))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .stroke(ActionLensTheme.amberAccent.opacity(0.6), lineWidth: 0.6)
-                                )
-                                .offset(y: vertex.vertexType.contains("Apex") ? 12 : -12)
-                        }
-                        .position(x: vx, y: vy)
+                        // Start Dot
+                        Circle()
+                            .fill(ActionLensTheme.cyanAccent.opacity(0.8))
+                            .frame(width: 5, height: 5)
+                            .position(x: sx, y: sy)
+                        
+                        // Arrowhead end dot
+                        Circle()
+                            .fill(ActionLensTheme.amberAccent)
+                            .frame(width: 7, height: 7)
+                            .position(x: ex, y: ey)
                     }
                 }
                 
