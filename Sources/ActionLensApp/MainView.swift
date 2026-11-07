@@ -5,7 +5,7 @@ public struct MainView: View {
     @ObservedObject var manager = SessionManager.shared
     
     let deviceOptions = ["Unified", "Mac", "Phone"]
-    let tabs = ["Click Radar", "Keystroke WPM", "Session Story"]
+    let tabs = ["Click Radar", "Keystroke WPM", "Session Story", "45 Vectors"]
     
     public init() {}
     
@@ -65,6 +65,8 @@ public struct MainView: View {
                                 KeystrokeTelemetryView(manager: manager)
                             case "Session Story":
                                 SessionStorybookView(manager: manager)
+                            case "45 Vectors":
+                                TelemetryMatrixView(manager: manager)
                             default:
                                 ClickRadarView(manager: manager)
                             }
@@ -85,6 +87,7 @@ public struct MainView: View {
         case "Click Radar": return "scope"
         case "Keystroke WPM": return "speedometer"
         case "Session Story": return "book.pages"
+        case "45 Vectors": return "waveform.path.ecg"
         default: return "circle"
         }
     }

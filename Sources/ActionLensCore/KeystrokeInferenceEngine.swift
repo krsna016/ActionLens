@@ -18,6 +18,12 @@ public class KeystrokeInferenceEngine {
     private var flushTimer: Timer?
     private var isRunning: Bool = false
     
+    // Micro-biometric timing telemetry (Signals 1 - 2)
+    private var keyDownTimestamps: [UInt16: Date] = [:]
+    private var lastKeyUpTime: Date? = nil
+    private var dwellTimes: [Double] = []
+    private var flightTimes: [Double] = []
+    
     public init(
         onAction: @escaping ActionHandler,
         onWPMUpdate: @escaping WPMUpdateHandler
@@ -30,7 +36,7 @@ public class KeystrokeInferenceEngine {
         guard !isRunning else { return }
         isRunning = true
         
-        let mask: NSEvent.EventTypeMask = [.keyDown]
+        let mask: NSEvent.EventTypeMask = [.keyDown, .keyUp]
         
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
             self?.handleKeyEvent(event)
@@ -59,6 +65,29 @@ public class KeystrokeInferenceEngine {
     
     private func handleKeyEvent(_ event: NSEvent) {
         let now = Date()
+        
+        // Handle keyUp for dwell time calculation
+        if event.type == .keyUp {
+            if let downTime = keyDownTimestamps[event.keyCode] {
+                let dwell = max(now.timeIntervalSince(downTime) * 1000.0, 5.0)
+                if dwell < 800.0 {
+                    dwellTimes.append(dwell)
+                }
+                keyDownTimestamps.removeValue(forKey: event.keyCode)
+            }
+            lastKeyUpTime = now
+            return
+        }
+        
+        // Track inter-key flight time on keyDown
+        if let lastUp = lastKeyUpTime {
+            let flight = max(now.timeIntervalSince(lastUp) * 1000.0, 5.0)
+            if flight < 1200.0 {
+                flightTimes.append(flight)
+            }
+        }
+        keyDownTimestamps[event.keyCode] = now
+        
         let frontApp = NSWorkspace.shared.frontmostApplication
         let appName = frontApp?.localizedName ?? "Desktop"
         let windowTitle = appName
@@ -194,13 +223,39 @@ public class KeystrokeInferenceEngine {
         let flow = classifyFlowState(wpm: wpm)
         let app = activeBurstApp.isEmpty ? "your workspace" : activeBurstApp
         
+        let avgDwell = dwellTimes.isEmpty ? 58.4 : Double(round((dwellTimes.reduce(0, +) / Double(dwellTimes.count)) * 10) / 10)
+        let avgFlight = flightTimes.isEmpty ? 96.2 : Double(round((flightTimes.reduce(0, +) / Double(flightTimes.count)) * 10) / 10)
+        let confidence = max(0.1, min(0.99, Double(round((1.0 - abs(avgDwell - 60.0) / 140.0) * 100) / 100)))
+        
+        let rhythm: String
+        if avgDwell < 55.0 {
+            rhythm = "Brisk Fluid Cadence"
+        } else if avgDwell < 85.0 {
+            rhythm = "Steady Rhythmic Cadence"
+        } else if avgDwell < 150.0 {
+            rhythm = "Hesitant Deliberate Cadence"
+        } else {
+            rhythm = "Fatigued Staccato Cadence"
+        }
+        
+        let biometrics = KeystrokeMicroBiometrics(
+            dwellTimeMs: avgDwell,
+            flightTimeMs: avgFlight,
+            confidenceScore: confidence,
+            neuroMotorRhythm: rhythm
+        )
+        
+        // Update live hardware state via dedicated thread-safe mutator
+        HardwareSensorTelemetry.shared.updateKeystrokeDynamics(biometrics)
+        
         let meta = KeystrokeBurstMetadata(
             charCount: burstCharCount,
             wpm: wpm,
             durationSeconds: durationSec,
             flowState: flow,
             terminatorKey: terminator,
-            inferredCategory: inferCategory(count: burstCharCount, app: app)
+            inferredCategory: inferCategory(count: burstCharCount, app: app),
+            biometrics: biometrics
         )
         
         let englishStory = NarrativeEngine.shared.narrateBurst(metadata: meta, appName: app)
@@ -224,6 +279,8 @@ public class KeystrokeInferenceEngine {
         burstStartTime = nil
         lastKeyTime = nil
         activeBurstApp = ""
+        dwellTimes.removeAll()
+        flightTimes.removeAll()
     }
     
     private func classifyFlowState(wpm: Double) -> FlowState {

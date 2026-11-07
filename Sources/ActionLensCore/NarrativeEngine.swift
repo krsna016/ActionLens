@@ -72,16 +72,24 @@ public class NarrativeEngine {
         x: Double,
         y: Double,
         phoneModel: String,
-        isLongPress: Bool
+        isLongPress: Bool,
+        biometrics: TouchMicroBiometrics? = nil
     ) -> String {
         let phoneTag = phoneModel.isEmpty ? "Phone" : "Phone (\(phoneModel))"
         let coords = "(\(Int(x)), \(Int(y)))"
         let app = appName.isEmpty ? "the active screen" : appName
         
+        var bioDetails = ""
+        if let bio = biometrics {
+            let pressurePct = Int(bio.pressure * 100.0)
+            let area = String(format: "%.1f", bio.surfaceAreaMm2)
+            bioDetails = " [Force: \(pressurePct)% | Contact: \(area)mm² (\(bio.postureHeuristic)) | Micro-Dwell: \(Int(bio.microDwellLatencyMs))ms]"
+        }
+        
         if isLongPress {
-            return "On your \(phoneTag), you long-pressed at \(coords) inside \(app) to summon context options."
+            return "On your \(phoneTag), you long-pressed at \(coords) inside \(app)\(bioDetails) to summon context options."
         } else {
-            return "On your \(phoneTag), you tapped at \(coords) inside \(app)."
+            return "On your \(phoneTag), you tapped at \(coords) inside \(app)\(bioDetails)."
         }
     }
     
@@ -95,15 +103,21 @@ public class NarrativeEngine {
         let dist = Int(swipe.distance)
         let vel = Int(swipe.velocity)
         
+        let bio = swipe.biometrics
+        let arcStr = String(format: "%.1f°", bio.curvatureArcDeg)
+        let jitterStr = String(format: "%.1fpx", bio.jitterPx)
+        let hesitationTag = bio.isHesitationReversal ? " | Hesitation Reversal" : ""
+        let bioTag = " [Arc: \(arcStr) | Jitter: ±\(jitterStr) | \(bio.postureHeuristic)\(hesitationTag)]"
+        
         switch swipe.direction {
         case .up:
-            return "On your \(phoneTag), you performed an upward swipe (\(dist) px at ~\(vel) px/s) to scroll down your feed in \(app)."
+            return "On your \(phoneTag), you performed an upward swipe (\(dist) px at ~\(vel) px/s)\(bioTag) to scroll down your feed in \(app)."
         case .down:
-            return "On your \(phoneTag), you swiped downward (\(dist) px) in \(app) to scroll up or trigger pull-to-refresh."
+            return "On your \(phoneTag), you swiped downward (\(dist) px at ~\(vel) px/s)\(bioTag) in \(app) to scroll up or trigger pull-to-refresh."
         case .left:
-            return "On your \(phoneTag), you performed a leftward swipe (\(dist) px) in \(app) to advance forward or switch tabs."
+            return "On your \(phoneTag), you performed a leftward swipe (\(dist) px at ~\(vel) px/s)\(bioTag) in \(app) to advance forward or switch tabs."
         case .right:
-            return "On your \(phoneTag), you swiped right (\(dist) px) in \(app) to navigate back to the previous screen."
+            return "On your \(phoneTag), you swiped right (\(dist) px at ~\(vel) px/s)\(bioTag) in \(app) to navigate back to the previous screen."
         }
     }
     
@@ -124,25 +138,31 @@ public class NarrativeEngine {
         let roundedWpm = Int(metadata.wpm)
         let chars = metadata.charCount
         
+        let bio = metadata.biometrics
+        let dwell = Int(bio.dwellTimeMs)
+        let flight = Int(bio.flightTimeMs)
+        let conf = Int(bio.confidenceScore * 100.0)
+        let bioTag = " [Dwell: \(dwell)ms | Flight: \(flight)ms | \(bio.neuroMotorRhythm) (\(conf)% confidence)]"
+        
         if let term = metadata.terminatorKey, term == "Return" {
             if chars <= 15 {
-                return "In \(app), you entered a short command (\(chars) chars) and committed it with Return."
+                return "In \(app), you entered a short command (\(chars) chars)\(bioTag) and committed it with Return."
             } else {
-                return "In \(app), you composed an energetic \(chars)-character statement (~\(roundedWpm) WPM) and pressed Return to execute."
+                return "In \(app), you composed an energetic \(chars)-character statement (~\(roundedWpm) WPM)\(bioTag) and pressed Return to execute."
             }
         }
         
         switch metadata.flowState {
         case .sprinting:
-            return "You entered a high-speed sprint of \(chars) characters at a blistering \(roundedWpm) WPM inside \(app)."
+            return "You entered a high-speed sprint of \(chars) characters at a blistering \(roundedWpm) WPM\(bioTag) inside \(app)."
         case .deepFlow:
-            return "You sustained an uninterrupted deep writing flow (\(chars) chars, ~\(roundedWpm) WPM) in \(app)."
+            return "You sustained an uninterrupted deep writing flow (\(chars) chars, ~\(roundedWpm) WPM)\(bioTag) in \(app)."
         case .steady:
-            return "You drafted a fluent \(chars)-character sequence at a steady cadence of \(roundedWpm) WPM in \(app)."
+            return "You drafted a fluent \(chars)-character sequence at a steady cadence of \(roundedWpm) WPM\(bioTag) in \(app)."
         case .thoughtful:
-            return "You deliberately composed \(chars) characters with contemplative pauses (~\(roundedWpm) WPM) in \(app)."
+            return "You deliberately composed \(chars) characters with contemplative pauses (~\(roundedWpm) WPM)\(bioTag) in \(app)."
         case .idle:
-            return "You typed \(chars) characters in \(app)."
+            return "You typed \(chars) characters\(bioTag) in \(app)."
         }
     }
     

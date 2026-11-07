@@ -30,6 +30,15 @@ public class PhoneTracker {
     private var touchStartY: Double = 0.0
     private var touchStartTime: Date = Date()
     
+    // Micro-Biometric Touch Kinetics (Signals 3 - 8)
+    private var currentPressure: Double = 0.54
+    private var currentTouchMajor: Double = 26.0
+    private var currentTouchMinor: Double = 21.0
+    private var lastTouchEndTime: Date = Date()
+    private var trajectoryPoints: [(x: Double, y: Double, t: Date)] = []
+    private var hesitationSignChanges: Int = 0
+    private var lastVelocityY: Double = 0.0
+    
     private var appCheckTimer: Timer?
     private var reconnectTimer: DispatchSourceTimer?
     
@@ -311,8 +320,13 @@ public class PhoneTracker {
         if clean.contains("ABS_MT_POSITION_X") || (clean.contains("0003") && parts.contains("0035")) {
             if let rawVal = UInt32(hexToken, radix: 16) {
                 currentRawX = Double(rawVal)
-                if isTouching && !hasInitialCoords {
-                    touchStartX = (currentRawX / touchMaxX) * screenWidth
+                if isTouching {
+                    let px = (currentRawX / touchMaxX) * screenWidth
+                    let py = (currentRawY / touchMaxY) * screenHeight
+                    recordTrajectoryPoint(x: px, y: py)
+                    if !hasInitialCoords {
+                        touchStartX = px
+                    }
                 }
             }
         }
@@ -320,9 +334,32 @@ public class PhoneTracker {
         else if clean.contains("ABS_MT_POSITION_Y") || (clean.contains("0003") && parts.contains("0036")) {
             if let rawVal = UInt32(hexToken, radix: 16) {
                 currentRawY = Double(rawVal)
-                if isTouching && !hasInitialCoords {
-                    touchStartY = (currentRawY / touchMaxY) * screenHeight
+                if isTouching {
+                    let px = (currentRawX / touchMaxX) * screenWidth
+                    let py = (currentRawY / touchMaxY) * screenHeight
+                    recordTrajectoryPoint(x: px, y: py)
+                    if !hasInitialCoords {
+                        touchStartY = py
+                    }
                 }
+            }
+        }
+        // 2b. Pressure (ABS_MT_PRESSURE or hex 003a)
+        else if clean.contains("ABS_MT_PRESSURE") || (clean.contains("0003") && parts.contains("003a")) {
+            if let rawVal = UInt32(hexToken, radix: 16) {
+                currentPressure = min(max(Double(rawVal) / 255.0, 0.05), 1.0)
+            }
+        }
+        // 2c. Touch Major Ellipse (ABS_MT_TOUCH_MAJOR or hex 0030)
+        else if clean.contains("ABS_MT_TOUCH_MAJOR") || (clean.contains("0003") && parts.contains("0030")) {
+            if let rawVal = UInt32(hexToken, radix: 16) {
+                currentTouchMajor = max(Double(rawVal), 1.0)
+            }
+        }
+        // 2d. Touch Minor Ellipse (ABS_MT_TOUCH_MINOR or hex 0031)
+        else if clean.contains("ABS_MT_TOUCH_MINOR") || (clean.contains("0003") && parts.contains("0031")) {
+            if let rawVal = UInt32(hexToken, radix: 16) {
+                currentTouchMinor = max(Double(rawVal), 1.0)
             }
         }
         // 3. Tracking ID (ABS_MT_TRACKING_ID or hex 0039)
@@ -357,12 +394,34 @@ public class PhoneTracker {
         }
     }
     
+    private func recordTrajectoryPoint(x: Double, y: Double) {
+        guard isTouching else { return }
+        let now = Date()
+        if let lastPt = trajectoryPoints.last {
+            let dt = now.timeIntervalSince(lastPt.t)
+            if dt >= 0.004 { // 4ms sampling
+                let dy = y - lastPt.y
+                let vy = dy / max(dt, 0.001)
+                if (lastVelocityY > 250.0 && vy < -250.0) || (lastVelocityY < -250.0 && vy > 250.0) {
+                    hesitationSignChanges += 1
+                }
+                lastVelocityY = vy
+                trajectoryPoints.append((x: x, y: y, t: now))
+            }
+        } else {
+            trajectoryPoints.append((x: x, y: y, t: now))
+        }
+    }
+    
     private func handleTouchStart() {
         isTouching = true
         hasInitialCoords = false
         touchStartX = (currentRawX / touchMaxX) * screenWidth
         touchStartY = (currentRawY / touchMaxY) * screenHeight
         touchStartTime = Date()
+        trajectoryPoints = [(x: touchStartX, y: touchStartY, t: touchStartTime)]
+        hesitationSignChanges = 0
+        lastVelocityY = 0.0
     }
     
     private func handleTouchEnd() {
@@ -379,7 +438,54 @@ public class PhoneTracker {
         let distance = sqrt(dx * dx + dy * dy)
         let velocity = distance / duration
         
+        // Micro-Biometrics calculation
+        let microDwell = min(max(touchStartTime.timeIntervalSince(lastTouchEndTime) * 1000.0, 15.0), 30000.0)
+        let surfaceArea = Double.pi * (currentTouchMajor / 2.0) * (currentTouchMinor / 2.0) * 0.045
+        
+        let posture: String
+        if currentTouchMajor < 22.0 {
+            posture = "Index Fingertip Precision (High Angle)"
+        } else if currentTouchMajor > 36.0 {
+            posture = "Flat Thumb Pad (Single-Hand Cradled)"
+        } else {
+            posture = "Thumb Apex (Dynamic One-Handed)"
+        }
+        
+        var curvatureArc = 0.0
+        var jitter = 0.0
+        if trajectoryPoints.count >= 3 && distance > 20.0 {
+            let chordLen = max(distance, 1.0)
+            var maxPerp = 0.0
+            var sumPerpSq = 0.0
+            for pt in trajectoryPoints {
+                let num = abs((endY - touchStartY) * pt.x - (endX - touchStartX) * pt.y + endX * touchStartY - endY * touchStartX)
+                let perp = num / chordLen
+                if perp > maxPerp { maxPerp = perp }
+                sumPerpSq += (perp * perp)
+            }
+            curvatureArc = min((maxPerp / chordLen) * 57.2958 * 2.0, 89.0)
+            jitter = sqrt(sumPerpSq / Double(trajectoryPoints.count))
+        }
+        
+        let touchBio = TouchMicroBiometrics(
+            pressure: currentPressure,
+            contactMajor: currentTouchMajor,
+            contactMinor: currentTouchMinor,
+            surfaceAreaMm2: surfaceArea,
+            postureHeuristic: posture,
+            velocityVectorX: dx / duration,
+            velocityVectorY: dy / duration,
+            curvatureArcDeg: curvatureArc,
+            jitterPx: jitter,
+            microDwellLatencyMs: microDwell,
+            isHesitationReversal: hesitationSignChanges > 0
+        )
+        
+        HardwareSensorTelemetry.shared.updateTouchKinetics(touchBio)
+        lastTouchEndTime = now
+        
         let app = currentPhoneApp
+        let hardwareSnapshot = HardwareSensorTelemetry.shared.currentState
         
         if distance < 60.0 {
             // Direct Tap or Long Press
@@ -389,7 +495,8 @@ public class PhoneTracker {
                 x: endX,
                 y: endY,
                 phoneModel: phoneModel,
-                isLongPress: isLongPress
+                isLongPress: isLongPress,
+                biometrics: touchBio
             )
             
             let clickMeta = ActionClickMetadata(
@@ -402,7 +509,8 @@ public class PhoneTracker {
                 windowTitle: app,
                 uiRole: isLongPress ? "Long Press Target" : "Touch Surface",
                 uiTitle: app,
-                uiDescription: "Android Screen Tap"
+                uiDescription: "Android Screen Tap",
+                touchBiometrics: touchBio
             )
             
             let record = ActionRecord(
@@ -415,7 +523,8 @@ public class PhoneTracker {
                 clickMetadata: clickMeta,
                 burstMetadata: nil,
                 shortcutCombo: nil,
-                swipeMetadata: nil
+                swipeMetadata: nil,
+                hardwareSnapshot: hardwareSnapshot
             )
             
             DispatchQueue.main.async { [weak self] in
@@ -440,7 +549,8 @@ public class PhoneTracker {
                 velocity: velocity,
                 duration: duration,
                 screenWidth: screenWidth,
-                screenHeight: screenHeight
+                screenHeight: screenHeight,
+                biometrics: touchBio
             )
             
             let narrative = NarrativeEngine.shared.narratePhoneSwipe(
@@ -459,7 +569,8 @@ public class PhoneTracker {
                 clickMetadata: nil,
                 burstMetadata: nil,
                 shortcutCombo: nil,
-                swipeMetadata: swipe
+                swipeMetadata: swipe,
+                hardwareSnapshot: hardwareSnapshot
             )
             
             DispatchQueue.main.async { [weak self] in

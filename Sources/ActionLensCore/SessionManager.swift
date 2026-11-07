@@ -57,11 +57,15 @@ public class SessionManager: ObservableObject {
     @Published public var phoneModel: String = "Android Device"
     @Published public var phoneResolution: CGSize = CGSize(width: 1220, height: 2712)
     
+    // 45 Granular Telemetry Vectors State
+    @Published public var currentSensorState: HardwareSensorState = HardwareSensorState()
+    
     // UI Navigation State
     @Published public var selectedFilter: String = "All Events"
     @Published public var searchText: String = ""
     @Published public var isMiniHUD: Bool = false
     @Published public var rightTab: String = "Click Radar"
+    @Published public var telemetryMatrixGroup: Int = 0
     @Published public var toastMessage: String? = nil
     
     public let sessionStartTime = Date()
@@ -114,10 +118,21 @@ public class SessionManager: ObservableObject {
                     if let pt = self?.phoneTracker {
                         self?.phoneModel = pt.phoneModel
                         self?.phoneResolution = CGSize(width: pt.screenWidth, height: pt.screenHeight)
+                        if connected {
+                            HardwareSensorTelemetry.shared.sampleTelemetry(phoneSerial: pt.phoneSerial, adbPath: "/Users/openfrontierlabs/.local/bin/adb")
+                        }
                     }
                 }
             }
         )
+        
+        // 45 Granular Telemetry Vectors Engine
+        HardwareSensorTelemetry.shared.onUpdate = { [weak self] state in
+            DispatchQueue.main.async {
+                self?.currentSensorState = state
+            }
+        }
+        HardwareSensorTelemetry.shared.start()
         
         mouseTracker?.start()
         keyEngine?.start()
@@ -165,12 +180,32 @@ public class SessionManager: ObservableObject {
     public func handleNewRecord(_ record: ActionRecord) {
         guard isRecording else { return }
         
-        records.append(record)
-        currentApp = record.appName
-        currentWindowTitle = record.windowTitle
+        let effectiveRecord: ActionRecord
+        if record.hardwareSnapshot == nil {
+            effectiveRecord = ActionRecord(
+                id: record.id,
+                timestamp: record.timestamp,
+                deviceTarget: record.deviceTarget,
+                type: record.type,
+                appName: record.appName,
+                windowTitle: record.windowTitle,
+                narrativeEnglish: record.narrativeEnglish,
+                clickMetadata: record.clickMetadata,
+                burstMetadata: record.burstMetadata,
+                shortcutCombo: record.shortcutCombo,
+                swipeMetadata: record.swipeMetadata,
+                hardwareSnapshot: currentSensorState
+            )
+        } else {
+            effectiveRecord = record
+        }
+        
+        records.append(effectiveRecord)
+        currentApp = effectiveRecord.appName
+        currentWindowTitle = effectiveRecord.windowTitle
         
         // Update counters
-        switch record.type {
+        switch effectiveRecord.type {
         case .leftClick, .rightClick, .doubleClick:
             totalClicks += 1
             if let click = record.clickMetadata {
