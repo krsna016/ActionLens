@@ -323,28 +323,12 @@ public class PhoneTracker {
         if clean.contains("ABS_MT_POSITION_X") || (clean.contains("0003") && parts.contains("0035")) {
             if let rawVal = UInt32(hexToken, radix: 16) {
                 currentRawX = Double(rawVal)
-                if isTouching {
-                    let px = (currentRawX / touchMaxX) * screenWidth
-                    let py = (currentRawY / touchMaxY) * screenHeight
-                    recordTrajectoryPoint(x: px, y: py)
-                    if !hasInitialCoords {
-                        touchStartX = px
-                    }
-                }
             }
         }
         // 2. Position Y (ABS_MT_POSITION_Y or hex 0036)
         else if clean.contains("ABS_MT_POSITION_Y") || (clean.contains("0003") && parts.contains("0036")) {
             if let rawVal = UInt32(hexToken, radix: 16) {
                 currentRawY = Double(rawVal)
-                if isTouching {
-                    let px = (currentRawX / touchMaxX) * screenWidth
-                    let py = (currentRawY / touchMaxY) * screenHeight
-                    recordTrajectoryPoint(x: px, y: py)
-                    if !hasInitialCoords {
-                        touchStartY = py
-                    }
-                }
             }
         }
         // 2b. Pressure (ABS_MT_PRESSURE or hex 003a)
@@ -389,10 +373,17 @@ public class PhoneTracker {
                 }
             }
         }
-        // 4. Sync Report
+        // 4. Sync Report: Atomic kernel hardware synchronization barrier
         else if clean.contains("SYN_REPORT") || (clean.contains("0000") && parts.contains("0000")) {
-            if isTouching && !hasInitialCoords {
-                hasInitialCoords = true
+            if isTouching {
+                let px = (currentRawX / touchMaxX) * screenWidth
+                let py = (currentRawY / touchMaxY) * screenHeight
+                if !hasInitialCoords {
+                    hasInitialCoords = true
+                    touchStartX = px
+                    touchStartY = py
+                }
+                recordTrajectoryPoint(x: px, y: py)
             }
         }
     }
@@ -401,11 +392,14 @@ public class PhoneTracker {
         guard isTouching else { return }
         let now = Date()
         if let lastPt = trajectoryPoints.last {
+            let dx = x - lastPt.x
+            let dy = y - lastPt.y
+            let dist = hypot(dx, dy)
             let dt = now.timeIntervalSince(lastPt.t)
-            if dt >= 0.004 { // 4ms sampling
-                let dy = y - lastPt.y
+            // Synchronized sampling: record when finger moved >= 1.5px or 10ms elapsed
+            if dist >= 1.5 || dt >= 0.010 {
                 let vy = dy / max(dt, 0.001)
-                if (lastVelocityY > 250.0 && vy < -250.0) || (lastVelocityY < -250.0 && vy > 250.0) {
+                if (lastVelocityY > 150.0 && vy < -150.0) || (lastVelocityY < -150.0 && vy > 150.0) {
                     hesitationSignChanges += 1
                 }
                 lastVelocityY = vy
@@ -529,15 +523,34 @@ public class PhoneTracker {
             }
         }
         
-        // U-Shape (Apex Dip): Bottom apex is >= 45px below both start and end
+        // U-Shape (Apex Dip): Bottom apex is >= 20px below both start and end
         let dipDepthFromStart = maxY - startY
         let dipDepthFromEnd = maxY - endY
-        let isUShape = dipDepthFromStart >= 45.0 && dipDepthFromEnd >= 45.0 && maxIdx > 0 && maxIdx < (filtered.count - 1)
+        let isUShape = dipDepthFromStart >= 20.0 && dipDepthFromEnd >= 20.0 && maxIdx > 0 && maxIdx < (filtered.count - 1)
         
-        // Arch / Inverted U: Top crest is >= 45px above both start and end (minY is smaller)
+        // Arch / Inverted U: Top crest is >= 20px above both start and end (minY is smaller)
         let crestRiseFromStart = startY - minY
         let crestRiseFromEnd = endY - minY
-        let isArchShape = crestRiseFromStart >= 45.0 && crestRiseFromEnd >= 45.0 && minIdx > 0 && minIdx < (filtered.count - 1)
+        let isArchShape = crestRiseFromStart >= 20.0 && crestRiseFromEnd >= 20.0 && minIdx > 0 && minIdx < (filtered.count - 1)
+        
+        // Lateral Extrema for C-Curves (Horizontal U-turns)
+        let startX = fullPath.first!.x
+        let endX = fullPath.last!.x
+        var maxX = -Double.infinity
+        var maxXIdx = -1
+        var minX = Double.infinity
+        var minXIdx = -1
+        for (i, pt) in filtered.enumerated() {
+            if pt.x > maxX { maxX = pt.x; maxXIdx = i }
+            if pt.x < minX { minX = pt.x; minXIdx = i }
+        }
+        let rightCrestFromStart = maxX - startX
+        let rightCrestFromEnd = maxX - endX
+        let isRightCShape = rightCrestFromStart >= 20.0 && rightCrestFromEnd >= 20.0 && maxXIdx > 0 && maxXIdx < (filtered.count - 1)
+        
+        let leftDipFromStart = startX - minX
+        let leftDipFromEnd = endX - minX
+        let isLeftCShape = leftDipFromStart >= 20.0 && leftDipFromEnd >= 20.0 && minXIdx > 0 && minXIdx < (filtered.count - 1)
         
         if isUShape {
             let apex = filtered[maxIdx]
@@ -563,6 +576,30 @@ public class PhoneTracker {
                     angleDeg: 180.0
                 )
             )
+        } else if isRightCShape {
+            let apex = filtered[maxXIdx]
+            detectedVertices.append(
+                TrajectoryVertex(
+                    x: apex.x,
+                    y: apex.y,
+                    normalizedX: apex.normalizedX,
+                    normalizedY: apex.normalizedY,
+                    vertexType: "Lateral Apex (C-Curve)",
+                    angleDeg: 180.0
+                )
+            )
+        } else if isLeftCShape {
+            let apex = filtered[minXIdx]
+            detectedVertices.append(
+                TrajectoryVertex(
+                    x: apex.x,
+                    y: apex.y,
+                    normalizedX: apex.normalizedX,
+                    normalizedY: apex.normalizedY,
+                    vertexType: "Lateral Apex (Reverse C)",
+                    angleDeg: 180.0
+                )
+            )
         }
         
         // 3. Scan for Angular Turning Vertices (Discrete Curvature & Directional Bends)
@@ -580,25 +617,25 @@ public class PhoneTracker {
                 let mag1 = hypot(v1x, v1y)
                 let mag2 = hypot(v2x, v2y)
                 
-                if mag1 > 8.0 && mag2 > 8.0 {
+                if mag1 > 6.0 && mag2 > 6.0 {
                     let dot = (v1x * v2x + v1y * v2y) / (mag1 * mag2)
                     let clampedDot = min(max(dot, -1.0), 1.0)
                     let angleDeg = acos(clampedDot) * 180.0 / Double.pi
                     
-                    if angleDeg >= 36.0 {
+                    if angleDeg >= 28.0 {
                         // Avoid duplicates if near an existing vertex
                         let alreadyCovered = detectedVertices.contains { v in
-                            hypot(v.x - pCurr.x, v.y - pCurr.y) < 32.0
+                            hypot(v.x - pCurr.x, v.y - pCurr.y) < 28.0
                         }
                         
                         if !alreadyCovered {
                             let vType: String
-                            if angleDeg >= 120.0 {
+                            if angleDeg >= 115.0 {
                                 vType = "V-Shape Reversal"
-                            } else if angleDeg >= 65.0 {
+                            } else if angleDeg >= 60.0 {
                                 vType = "Corner Vertex"
                             } else {
-                                vType = "Inflection Point"
+                                vType = "Curved Inflection"
                             }
                             
                             detectedVertices.append(
@@ -623,6 +660,8 @@ public class PhoneTracker {
             shape = "U-Shape Curve"
         } else if isArchShape {
             shape = "Inverted U / Arch"
+        } else if isRightCShape || isLeftCShape {
+            shape = "C-Shape Curve"
         } else if detectedVertices.count >= 2 {
             shape = "S-Curve / Zigzag"
         } else if detectedVertices.contains(where: { $0.angleDeg >= 110.0 }) {
@@ -703,7 +742,20 @@ public class PhoneTracker {
         let hardwareSnapshot = HardwareSensorTelemetry.shared.currentState
         let trajectoryAnalysis = analyzeTrajectory()
         
-        if distance < 60.0 && trajectoryAnalysis.gestureShape == "Linear Swipe" {
+        // Calculate Cumulative Physical Path Length
+        var totalPathLength = 0.0
+        if trajectoryAnalysis.pathPoints.count >= 2 {
+            for i in 1..<trajectoryAnalysis.pathPoints.count {
+                let p1 = trajectoryAnalysis.pathPoints[i - 1]
+                let p2 = trajectoryAnalysis.pathPoints[i]
+                totalPathLength += hypot(p2.x - p1.x, p2.y - p1.y)
+            }
+        }
+        
+        // Tap vs Swipe: Tap has minimal cumulative path length (< 40px) and no turning vertices
+        let isTap = totalPathLength < 40.0 && trajectoryAnalysis.vertices.isEmpty
+        
+        if isTap {
             // Direct Tap or Long Press
             let isLongPress = duration > 0.45
             let narrative = NarrativeEngine.shared.narratePhoneTap(

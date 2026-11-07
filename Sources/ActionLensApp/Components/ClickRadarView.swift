@@ -9,26 +9,63 @@ public struct ClickRadarView: View {
     }
     
     public var isPhoneCanvas: Bool {
-        return manager.activeDeviceView == "Phone"
+        if manager.activeDeviceView == "Phone" { return true }
+        if manager.activeDeviceView == "Mac" { return false }
+        return manager.radarCanvasDevice == "Phone"
     }
     
     public var body: some View {
         VStack(spacing: 14) {
-            // Header with Device Canvas Indicator
-            HStack {
-                Label(
-                    isPhoneCanvas ? "PHONE DISPLAY RADAR & SWIPE TRACKER" : "LIVE CLICK RADAR & SCREEN MAPPING",
-                    systemImage: isPhoneCanvas ? "iphone" : "scope"
-                )
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .foregroundColor(isPhoneCanvas ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
+            // Header with Interactive Canvas Mode Switcher
+            HStack(spacing: 8) {
+                // Device Toggle Switch
+                HStack(spacing: 3) {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.radarCanvasDevice = "Phone"
+                            manager.activeDeviceView = "Phone"
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "iphone")
+                            Text(manager.phoneModel.isEmpty ? "Phone" : manager.phoneModel)
+                                .lineLimit(1)
+                        }
+                        .font(.system(size: 10, weight: isPhoneCanvas ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(isPhoneCanvas ? ActionLensTheme.mintAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(isPhoneCanvas ? ActionLensTheme.mintAccent.opacity(0.18) : Color.white.opacity(0.04))
+                        .cornerRadius(5)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.radarCanvasDevice = "Mac"
+                            manager.activeDeviceView = "Mac"
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "laptopcomputer")
+                            Text("Mac Screen")
+                        }
+                        .font(.system(size: 10, weight: !isPhoneCanvas ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(!isPhoneCanvas ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(!isPhoneCanvas ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
+                        .cornerRadius(5)
+                    }
+                    .buttonStyle(.plain)
+                }
                 
                 Spacer()
                 
-                // Device Indicator Pill
-                Text(isPhoneCanvas ? "\(manager.phoneModel)" : "Mac Retina Display")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundColor(ActionLensTheme.textSecondary)
+                // Mode / Status Badge
+                Text(isPhoneCanvas ? "\(Int(manager.phoneResolution.width))x\(Int(manager.phoneResolution.height))" : "Mac Retina")
+                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                    .foregroundColor(isPhoneCanvas ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color.black.opacity(0.4))
@@ -174,7 +211,7 @@ public struct ClickRadarView: View {
                 }
                 
                 // Phone Swipes & Complex Curves (U-Shapes, Arcs, Vertices)
-                ForEach(Array(manager.phoneSwipesList.suffix(6).enumerated()), id: \.offset) { _, swipe in
+                ForEach(manager.phoneSwipesList.suffix(8)) { swipe in
                     let sx = offsetX + CGFloat(swipe.normalizedStartX) * frameW
                     let sy = offsetY + CGFloat(swipe.normalizedStartY) * frameH
                     let ex = offsetX + CGFloat(swipe.normalizedEndX) * frameW
@@ -191,13 +228,13 @@ public struct ClickRadarView: View {
                         }
                         .stroke(
                             LinearGradient(
-                                colors: [ActionLensTheme.cyanAccent, ActionLensTheme.purpleAccent, ActionLensTheme.amberAccent],
+                                colors: [ActionLensTheme.cyanAccent, ActionLensTheme.mintAccent, ActionLensTheme.amberAccent],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                            style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round)
                         )
-                        .shadow(color: ActionLensTheme.cyanAccent.opacity(0.4), radius: 3)
+                        .shadow(color: ActionLensTheme.cyanAccent.opacity(0.6), radius: 4)
                     } else {
                         Path { p in
                             p.move(to: CGPoint(x: sx, y: sy))
@@ -209,7 +246,7 @@ public struct ClickRadarView: View {
                                 startPoint: .leading,
                                 endPoint: .trailing
                             ),
-                            style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 2])
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [4, 2])
                         )
                     }
                     

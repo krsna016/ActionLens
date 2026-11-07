@@ -223,7 +223,8 @@ public struct TrajectoryVertex: Codable, Identifiable {
     }
 }
 
-public struct SwipeMetadata: Codable {
+public struct SwipeMetadata: Codable, Identifiable {
+    public var id: UUID = UUID()
     public let startX: Double
     public let startY: Double
     public let endX: Double
@@ -242,6 +243,7 @@ public struct SwipeMetadata: Codable {
     public let gestureShape: String // "Linear Flick", "U-Shape Curve", "Inverted U / Arch", "V-Shape", "S-Curve", "Arc Sweep", "Zigzag Reversal"
     
     public init(
+        id: UUID = UUID(),
         startX: Double,
         startY: Double,
         endX: Double,
@@ -257,6 +259,7 @@ public struct SwipeMetadata: Codable {
         vertices: [TrajectoryVertex] = [],
         gestureShape: String = "Linear Swipe"
     ) {
+        self.id = id
         self.startX = startX
         self.startY = startY
         self.endX = endX

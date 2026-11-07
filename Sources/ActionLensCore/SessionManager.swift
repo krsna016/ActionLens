@@ -54,6 +54,7 @@ public class SessionManager: ObservableObject {
     
     // Multi-Device Switcher State ("Mac", "Phone", "Unified")
     @Published public var activeDeviceView: String = "Unified"
+    @Published public var radarCanvasDevice: String = "Phone"
     @Published public var isPhoneConnected: Bool = false
     @Published public var phoneStatusDescription: String = "Connecting..."
     @Published public var phoneModel: String = "Android Device"
