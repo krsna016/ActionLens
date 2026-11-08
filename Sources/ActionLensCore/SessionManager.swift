@@ -80,13 +80,13 @@ public class SessionManager: ObservableObject {
     private var scrcpyProcess: Process? = nil
     @Published public var phoneTwinImage: NSImage? = nil
     @Published public var twinFrameId: UUID = UUID()
-    @Published public var phoneCanvasHeight: CGFloat = 350.0 {
+    @Published public var phoneCanvasHeight: CGFloat = 460.0 {
         didSet {
             phoneScreenScale = Double(phoneCanvasHeight / 260.0)
         }
     }
-    @Published public var macCanvasHeight: CGFloat = 260.0
-    @Published public var phoneScreenScale: Double = 1.346 // Generous large default screen scale
+    @Published public var macCanvasHeight: CGFloat = 340.0
+    @Published public var phoneScreenScale: Double = 1.769 // Generous large default screen scale
     @Published public var psychometricState: PsychometricCognitiveState = PsychometricCognitiveState()
     @Published public var primaryFocusCentroid: CGPoint = CGPoint(x: 0.5, y: 0.5)
     @Published public var deadZoneCoveragePct: Double = 76.5

@@ -26,15 +26,15 @@ public struct ClickRadarView: View {
                             manager.activeDeviceView = "Phone"
                         }
                     }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Image(systemName: "iphone")
                             Text(manager.phoneModel.isEmpty ? "Phone" : manager.phoneModel)
                                 .lineLimit(1)
                         }
-                        .font(.system(size: 10, weight: isPhoneCanvas ? .bold : .medium, design: .monospaced))
+                        .font(.system(size: 12, weight: isPhoneCanvas ? .black : .bold, design: .monospaced))
                         .foregroundColor(isPhoneCanvas ? ActionLensTheme.mintAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
                         .background(isPhoneCanvas ? ActionLensTheme.mintAccent.opacity(0.18) : Color.white.opacity(0.04))
                         .cornerRadius(5)
                     }
@@ -46,14 +46,14 @@ public struct ClickRadarView: View {
                             manager.activeDeviceView = "Mac"
                         }
                     }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Image(systemName: "laptopcomputer")
                             Text("Mac Screen")
                         }
-                        .font(.system(size: 10, weight: !isPhoneCanvas ? .bold : .medium, design: .monospaced))
+                        .font(.system(size: 12, weight: !isPhoneCanvas ? .black : .bold, design: .monospaced))
                         .foregroundColor(!isPhoneCanvas ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
                         .background(!isPhoneCanvas ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
                         .cornerRadius(5)
                     }
@@ -64,10 +64,10 @@ public struct ClickRadarView: View {
                 
                 // Mode / Status Badge
                 Text(isPhoneCanvas ? "\(Int(manager.phoneResolution.width))x\(Int(manager.phoneResolution.height))" : "Mac Retina")
-                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                     .foregroundColor(isPhoneCanvas ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3.5)
                     .background(Color.black.opacity(0.4))
                     .cornerRadius(4)
             }
@@ -77,7 +77,7 @@ public struct ClickRadarView: View {
             if isPhoneCanvas {
                 HStack(spacing: 6) {
                     Text("SWIPE STYLE:")
-                        .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                        .font(.system(size: 11, weight: .black, design: .monospaced))
                         .foregroundColor(ActionLensTheme.textTertiary)
                     
                     Button(action: {
@@ -85,15 +85,15 @@ public struct ClickRadarView: View {
                             manager.swipeRenderStyle = "Polyline Curve"
                         }
                     }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
                             Text("Curve & Vertex")
                                 .lineLimit(1)
                         }
-                        .font(.system(size: 11, weight: manager.swipeRenderStyle == "Polyline Curve" ? .bold : .medium, design: .monospaced))
+                        .font(.system(size: 12.5, weight: manager.swipeRenderStyle == "Polyline Curve" ? .black : .bold, design: .monospaced))
                         .foregroundColor(manager.swipeRenderStyle == "Polyline Curve" ? ActionLensTheme.amberAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
                         .background(manager.swipeRenderStyle == "Polyline Curve" ? ActionLensTheme.amberAccent.opacity(0.18) : Color.white.opacity(0.04))
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                         .overlay(
@@ -108,15 +108,15 @@ public struct ClickRadarView: View {
                             manager.swipeRenderStyle = "Linear Vector"
                         }
                     }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Image(systemName: "arrow.up.right")
                             Text("Linear Vector")
                                 .lineLimit(1)
                         }
-                        .font(.system(size: 11, weight: manager.swipeRenderStyle == "Linear Vector" ? .bold : .medium, design: .monospaced))
+                        .font(.system(size: 12.5, weight: manager.swipeRenderStyle == "Linear Vector" ? .black : .bold, design: .monospaced))
                         .foregroundColor(manager.swipeRenderStyle == "Linear Vector" ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
                         .background(manager.swipeRenderStyle == "Linear Vector" ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                         .overlay(
@@ -140,14 +140,14 @@ public struct ClickRadarView: View {
                 }) {
                     HStack(spacing: 5) {
                         Image(systemName: manager.isHeatmapEnabled ? "flame.fill" : "flame")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                         Text(manager.isHeatmapEnabled ? "HEATMAP: ON" : "HEATMAP: OFF")
                             .lineLimit(1)
                     }
-                    .font(.system(size: 11, weight: manager.isHeatmapEnabled ? .bold : .medium, design: .monospaced))
+                    .font(.system(size: 12, weight: manager.isHeatmapEnabled ? .bold : .medium, design: .monospaced))
                     .foregroundColor(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent : ActionLensTheme.textSecondary)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 5.5)
                     .background(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent.opacity(0.18) : Color.white.opacity(0.04))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -162,14 +162,14 @@ public struct ClickRadarView: View {
                 }) {
                     HStack(spacing: 5) {
                         Image(systemName: manager.isIntentPredictionEnabled ? "target" : "scope")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                         Text(manager.isIntentPredictionEnabled ? "INTENT: ON" : "INTENT: OFF")
                             .lineLimit(1)
                     }
-                    .font(.system(size: 11, weight: manager.isIntentPredictionEnabled ? .bold : .medium, design: .monospaced))
+                    .font(.system(size: 12, weight: manager.isIntentPredictionEnabled ? .bold : .medium, design: .monospaced))
                     .foregroundColor(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 5.5)
                     .background(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -186,14 +186,14 @@ public struct ClickRadarView: View {
                 }) {
                     HStack(spacing: 5) {
                         Image(systemName: "eraser.line.dashed")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                         Text(isPhoneCanvas ? "FLUSH CANVAS" : "FLUSH RADAR")
                             .lineLimit(1)
                     }
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundColor(ActionLensTheme.amberAccent)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 5.5)
                     .background(ActionLensTheme.amberAccent.opacity(0.15))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -208,10 +208,10 @@ public struct ClickRadarView: View {
                 
                 if manager.isHeatmapEnabled {
                     Text("DEAD-ZONE: \(Int(manager.deadZoneCoveragePct))%")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                         .foregroundColor(ActionLensTheme.coralAccent)
                         .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 3.5)
                         .background(Color.black.opacity(0.5))
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                 }
@@ -341,9 +341,14 @@ public struct ClickRadarView: View {
                 }
                 
                 if manager.clickPings.filter({ $0.deviceTarget == .mac }).isEmpty {
-                    Text("Click anywhere on macOS to visualize radar pings")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(ActionLensTheme.textTertiary)
+                    VStack(spacing: 6) {
+                        Text("Mac Retina Display Radar")
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.cyanAccent)
+                        Text("Click anywhere on macOS to visualize radar pings")
+                            .font(.system(size: 12.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
                 }
         }
         .frame(height: manager.macCanvasHeight)
@@ -662,12 +667,12 @@ public struct ClickRadarView: View {
                 }
                 
                 if manager.totalPhoneTaps == 0 && manager.totalPhoneSwipes == 0 {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 6) {
                         Text("Tap or swipe on phone")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .font(.system(size: 15.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.mintAccent)
                         Text("\(Int(manager.phoneResolution.width))x\(Int(manager.phoneResolution.height))")
-                            .font(.system(size: 9.5, design: .monospaced))
+                            .font(.system(size: 12.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textTertiary)
                     }
                     .position(x: geo.size.width / 2, y: geo.size.height / 2)
@@ -681,7 +686,7 @@ public struct ClickRadarView: View {
     private var recentInterceptionsList: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("RECENT SPATIAL INTERCEPTIONS")
-                .font(.system(size: 12.5, weight: .bold, design: .monospaced))
+                .font(.system(size: 12.5, weight: .black, design: .monospaced))
                 .foregroundColor(ActionLensTheme.textSecondary)
             
             ScrollView {
@@ -699,50 +704,50 @@ public struct ClickRadarView: View {
                         HStack(spacing: 8) {
                             // Device Tag
                             Image(systemName: record.deviceTarget.icon)
-                                .font(.system(size: 12))
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(record.deviceTarget == .phone ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
                             
                             if let swipe = record.swipeMetadata {
                                 Image(systemName: swipe.gestureShape.contains("U-Shape") ? "arrow.triangle.swap" : swipe.direction.icon)
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 13, weight: .bold))
                                     .foregroundColor(ActionLensTheme.amberAccent)
                                 Text(swipe.gestureShape != "Linear Swipe" ? swipe.gestureShape : swipe.direction.rawValue)
-                                    .font(.system(size: 12.5, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.amberAccent)
                                 if !swipe.vertices.isEmpty {
                                     Text("[\(swipe.vertices.count)v]")
-                                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                        .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                                         .foregroundColor(ActionLensTheme.mintAccent)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
+                                        .padding(.horizontal, 4.5)
+                                        .padding(.vertical, 1.5)
                                         .background(ActionLensTheme.mintAccent.opacity(0.15))
                                         .cornerRadius(2)
                                 }
                                 Text("(\(Int(swipe.distance))px)")
-                                    .font(.system(size: 11.5, design: .monospaced))
+                                    .font(.system(size: 12.5, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.textSecondary)
                             } else if let click = record.clickMetadata {
                                 Text("(\(Int(click.x)), \(Int(click.y)))")
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 14.5, weight: .bold, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.textPrimary)
                             }
                             
                             Text(record.appName)
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(ActionLensTheme.textSecondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 6.5)
+                                .padding(.vertical, 2.5)
                                 .background(Color.white.opacity(0.08))
                                 .cornerRadius(3)
                             
                             Spacer()
                             
                             Text(record.formattedTime)
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(size: 12.5, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.textTertiary)
                         }
                         .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
+                        .padding(.vertical, 5.5)
                         .background(ActionLensTheme.cardBackground)
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                         .overlay(
@@ -752,7 +757,7 @@ public struct ClickRadarView: View {
                     }
                 }
             }
-            .frame(maxHeight: 125)
+            .frame(maxHeight: 140)
         }
     }
     
@@ -762,20 +767,20 @@ public struct ClickRadarView: View {
             // Mac Keystrokes Pill
             HStack(spacing: 6) {
                 Image(systemName: "laptopcomputer")
-                    .font(.system(size: 12))
+                    .font(.system(size: 13))
                     .foregroundColor(ActionLensTheme.amberAccent)
                 Text("MAC:")
-                    .font(.system(size: 11.5, weight: .black, design: .monospaced))
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
                     .foregroundColor(ActionLensTheme.amberAccent)
                 Text("\(Int(manager.currentWPM)) WPM")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                 Text("(\(manager.currentFlowState.rawValue))")
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textTertiary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6.5)
             .background(Color.black.opacity(0.45))
             .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(
@@ -788,20 +793,20 @@ public struct ClickRadarView: View {
             // Phone Keystrokes Pill
             HStack(spacing: 6) {
                 Image(systemName: "iphone")
-                    .font(.system(size: 12))
+                    .font(.system(size: 13))
                     .foregroundColor(ActionLensTheme.mintAccent)
                 Text("PHONE:")
-                    .font(.system(size: 11.5, weight: .black, design: .monospaced))
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
                     .foregroundColor(ActionLensTheme.mintAccent)
                 Text(String(format: "%.0fms Dwell", manager.currentSensorState.keystrokeDwellTimeMs))
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                 Text(String(format: "%.0fms Flight", manager.currentSensorState.keystrokeFlightTimeMs))
-                    .font(.system(size: 11.5, design: .monospaced))
+                    .font(.system(size: 12.5, design: .monospaced))
                     .foregroundColor(ActionLensTheme.cyanAccent)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6.5)
             .background(Color.black.opacity(0.45))
             .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(

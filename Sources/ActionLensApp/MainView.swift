@@ -35,7 +35,7 @@ public struct MainView: View {
                     HStack(spacing: 16) {
                         // Left Pane: Live Narrative Feed (Beautiful English Stream)
                         LiveNarrativeFeedView(manager: manager)
-                            .frame(minWidth: 460)
+                            .frame(minWidth: 500)
                         
                         // Right Pane: Telemetry / Radar / Storybook
                         VStack(spacing: 12) {
@@ -48,11 +48,11 @@ public struct MainView: View {
                                         }
                                     }) {
                                         Label(tab.uppercased(), systemImage: iconForTab(tab))
-                                            .font(.system(size: 10.5, weight: manager.rightTab == tab ? .black : .bold, design: .monospaced))
+                                            .font(.system(size: 11.5, weight: manager.rightTab == tab ? .black : .bold, design: .monospaced))
                                             .lineLimit(1)
                                             .foregroundColor(manager.rightTab == tab ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                                            .padding(.horizontal, 9)
-                                            .padding(.vertical, 5.5)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
                                             .background(manager.rightTab == tab ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
                                             .cornerRadius(ActionLensTheme.tacticalRadius)
                                             .overlay(
@@ -84,13 +84,13 @@ public struct MainView: View {
                             
                             Spacer(minLength: 0)
                         }
-                        .frame(width: 480)
+                        .frame(width: 530)
                     }
                     .padding(16)
                 }
             }
         }
-        .frame(minWidth: 1040, minHeight: 650)
+        .frame(minWidth: 1160, minHeight: 760)
     }
     
     private func iconForTab(_ tab: String) -> String {
@@ -111,15 +111,15 @@ public struct MainView: View {
             HStack(spacing: 8) {
                 Circle()
                     .fill(manager.isRecording ? ActionLensTheme.mintAccent : ActionLensTheme.coralAccent)
-                    .frame(width: 8, height: 8)
+                    .frame(width: 9, height: 9)
                     .shadow(color: manager.isRecording ? ActionLensTheme.mintAccent.opacity(0.8) : ActionLensTheme.coralAccent.opacity(0.8), radius: 4)
                 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("ACTIONLENS // C4ISR")
-                        .font(.system(size: 13.5, weight: .black, design: .monospaced))
+                        .font(.system(size: 15, weight: .black, design: .monospaced))
                         .foregroundColor(ActionLensTheme.textPrimary)
                     Text(manager.isRecording ? "● REC: LIVE [52-VEC TELEMETRY]" : "■ HOLD: TELEMETRY PAUSED")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundColor(manager.isRecording ? ActionLensTheme.mintAccent : ActionLensTheme.coralAccent)
                 }
             }
@@ -136,20 +136,20 @@ public struct MainView: View {
                 // Frontmost Focus
                 HStack(spacing: 6) {
                     Image(systemName: "macwindow")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundColor(ActionLensTheme.purpleAccent)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("ACTIVE FOCUS")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textTertiary)
                         Text(manager.currentApp.isEmpty ? "SYSTEM" : manager.currentApp)
-                            .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textPrimary)
                             .lineLimit(1)
                     }
                 }
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5.5)
                 .background(ActionLensTheme.cardBackground)
                 .cornerRadius(ActionLensTheme.tacticalRadius)
                 .overlay(
@@ -166,14 +166,14 @@ public struct MainView: View {
                 Button(action: { manager.toggleRecording() }) {
                     HStack(spacing: 4) {
                         Image(systemName: manager.isRecording ? "pause.fill" : "play.fill")
-                            .font(.system(size: 9.5))
+                            .font(.system(size: 11))
                         Text(manager.isRecording ? "PAUSE" : "RESUME")
-                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .lineLimit(1)
                     }
                     .foregroundColor(manager.isRecording ? ActionLensTheme.cyanAccent : ActionLensTheme.mintAccent)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
                     .background(Color.black.opacity(0.4))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -192,14 +192,14 @@ public struct MainView: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "eraser.line.dashed")
-                            .font(.system(size: 9.5))
+                            .font(.system(size: 11))
                         Text("FLUSH CANVAS")
-                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .lineLimit(1)
                     }
                     .foregroundColor(ActionLensTheme.amberAccent)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
                     .background(ActionLensTheme.amberAccent.opacity(0.12))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -214,14 +214,14 @@ public struct MainView: View {
                 Button(action: { manager.clearHistory() }) {
                     HStack(spacing: 4) {
                         Image(systemName: "trash")
-                            .font(.system(size: 9.5))
+                            .font(.system(size: 11))
                         Text("PURGE DB")
-                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .lineLimit(1)
                     }
                     .foregroundColor(ActionLensTheme.coralAccent.opacity(0.85))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
                     .background(ActionLensTheme.coralAccent.opacity(0.10))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -239,9 +239,9 @@ public struct MainView: View {
                     }
                 }) {
                     Image(systemName: "arrow.down.right.and.arrow.up.left")
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundColor(ActionLensTheme.cyanAccent)
-                        .padding(6)
+                        .padding(7)
                         .background(ActionLensTheme.cyanAccent.opacity(0.15))
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                         .overlay(
@@ -268,7 +268,7 @@ public struct MainView: View {
     private var deviceSwitcherBar: some View {
         HStack(spacing: 12) {
             Text("DEVICE TARGET:")
-                .font(.system(size: 10.5, weight: .black, design: .monospaced))
+                .font(.system(size: 12, weight: .black, design: .monospaced))
                 .foregroundColor(ActionLensTheme.textTertiary)
             
             // Segmented Tactical Switcher
@@ -284,13 +284,13 @@ public struct MainView: View {
             HStack(spacing: 6) {
                 Circle()
                     .fill(manager.isPhoneConnected ? ActionLensTheme.mintAccent : ActionLensTheme.amberAccent)
-                    .frame(width: 6, height: 6)
+                    .frame(width: 7, height: 7)
                 Text(manager.isPhoneConnected ? "ADB LINK: \(manager.phoneStatusDescription) | 120Hz KINETICS" : "ADB: OFFLINE / DISCONNECTED")
-                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundColor(manager.isPhoneConnected ? ActionLensTheme.mintAccent : ActionLensTheme.amberAccent)
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
             .background(Color.black.opacity(0.5))
             .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(
@@ -299,7 +299,7 @@ public struct MainView: View {
             )
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 6)
+        .padding(.vertical, 7)
         .background(ActionLensTheme.background.opacity(0.95))
     }
     
@@ -312,14 +312,14 @@ public struct MainView: View {
         }) {
             HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                 Text(title)
-                    .font(.system(size: 10.5, weight: isSelected ? .black : .bold, design: .monospaced))
+                    .font(.system(size: 12, weight: isSelected ? .black : .bold, design: .monospaced))
                     .lineLimit(1)
             }
             .foregroundColor(isSelected ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4.5)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 5.5)
             .background(isSelected ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
             .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(
@@ -333,19 +333,19 @@ public struct MainView: View {
     private func kpiBadge(title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 11))
+                .font(.system(size: 12))
                 .foregroundColor(color)
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textTertiary)
                 Text(value)
-                    .font(.system(size: 12.5, weight: .black, design: .monospaced))
+                    .font(.system(size: 14.5, weight: .black, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textPrimary)
             }
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5.5)
         .background(ActionLensTheme.cardBackground)
         .cornerRadius(ActionLensTheme.tacticalRadius)
         .overlay(
