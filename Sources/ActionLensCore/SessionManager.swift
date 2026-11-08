@@ -76,6 +76,8 @@ public class SessionManager: ObservableObject {
         }
     }
     @Published public var isIntentPredictionEnabled: Bool = true
+    @Published public var isScrcpyRunning: Bool = false
+    private var scrcpyProcess: Process? = nil
     @Published public var phoneTwinImage: NSImage? = nil
     @Published public var twinFrameId: UUID = UUID()
     @Published public var phoneScreenScale: Double = 1.0 // 1.0 = Compact, 1.35 = Large, 1.7 = Cinema
@@ -494,5 +496,75 @@ public class SessionManager: ObservableObject {
         totalPhoneSwipes = 0
         appCounts.removeAll()
         updateSessionStory()
+    }
+    
+    // MARK: - scrcpy 60 FPS Hardware-Accelerated Twin Engine
+    public func toggleScrcpyTwin() {
+        if isScrcpyRunning {
+            terminateScrcpyTwin()
+        } else {
+            launchScrcpyTwin()
+        }
+    }
+    
+    public func launchScrcpyTwin() {
+        guard let pt = phoneTracker, pt.isConnected, !pt.phoneSerial.isEmpty else {
+            toastMessage = "Phone disconnected: Cannot launch scrcpy"
+            return
+        }
+        
+        terminateScrcpyTwin()
+        
+        let scrcpyCandidates = [
+            "/Users/openfrontierlabs/.local/bin/scrcpy",
+            "/opt/homebrew/bin/scrcpy",
+            "/usr/local/bin/scrcpy"
+        ]
+        guard let binPath = scrcpyCandidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            toastMessage = "scrcpy binary not found"
+            return
+        }
+        
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: binPath)
+        p.arguments = [
+            "-s", pt.phoneSerial,
+            "--window-title=ActionLens Digital Twin (60 FPS Metal)",
+            "--always-on-top",
+            "--stay-awake",
+            "--no-audio",
+            "--max-fps=60",
+            "--video-bit-rate=4M",
+            "--window-width=340"
+        ]
+        
+        p.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.isScrcpyRunning = false
+                self?.scrcpyProcess = nil
+            }
+        }
+        
+        do {
+            try p.run()
+            self.scrcpyProcess = p
+            self.isScrcpyRunning = true
+            self.toastMessage = "⚡️ scrcpy 60 FPS Metal Stream Active"
+        } catch {
+            self.toastMessage = "Failed to launch scrcpy: \(error.localizedDescription)"
+        }
+    }
+    
+    public func terminateScrcpyTwin() {
+        if let p = scrcpyProcess, p.isRunning {
+            p.terminate()
+        }
+        scrcpyProcess = nil
+        isScrcpyRunning = false
+    }
+    
+    deinit {
+        terminateScrcpyTwin()
+        stopDigitalTwinStream()
     }
 }

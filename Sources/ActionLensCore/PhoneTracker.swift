@@ -35,7 +35,8 @@ public class PhoneTracker {
     private var lastRecordedApp: String = ""
     public private(set) var isScreenInteractive: Bool = true
     private var lastWakefulnessCheck: Date = Date.distantPast
-    private let twinLock = NSLock()
+    private let twinStateLock = NSLock()
+    private var isCapturingTwin: Bool = false
     
     // Micro-Biometric Touch Kinetics (Signals 3 - 8)
     private var currentPressure: Double = 0.54
@@ -937,13 +938,20 @@ public class PhoneTracker {
             completion(nil)
             return
         }
-        guard twinLock.try() else {
-            // Drop duplicate request if previous screencap frame is still in transit
+        twinStateLock.lock()
+        if isCapturingTwin {
+            twinStateLock.unlock()
             return
         }
+        isCapturingTwin = true
+        twinStateLock.unlock()
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            defer { self?.twinLock.unlock() }
+            defer {
+                self?.twinStateLock.lock()
+                self?.isCapturingTwin = false
+                self?.twinStateLock.unlock()
+            }
             guard let self = self else {
                 DispatchQueue.main.async { completion(nil) }
                 return

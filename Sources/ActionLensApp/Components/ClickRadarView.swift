@@ -203,6 +203,30 @@ public struct ClickRadarView: View {
                         .cornerRadius(4)
                     }
                     .buttonStyle(.plain)
+                    
+                    // scrcpy 60FPS Hardware Mirror Toggle
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.toggleScrcpyTwin()
+                        }
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 8))
+                            Text(manager.isScrcpyRunning ? "scrcpy: 60FPS" : "scrcpy: OFF")
+                        }
+                        .font(.system(size: 9, weight: manager.isScrcpyRunning ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent.opacity(0.22) : Color.white.opacity(0.04))
+                        .cornerRadius(4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent.opacity(0.6) : Color.clear, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
                 
                 if manager.isHeatmapEnabled {
@@ -382,6 +406,32 @@ public struct ClickRadarView: View {
                         .overlay(Color.black.opacity(0.35))
                         .id(manager.twinFrameId)
                         .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                }
+                
+                // Hardware 60 FPS Stream HUD Status Indicator
+                if manager.isScrcpyRunning {
+                    VStack {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(ActionLensTheme.cyanAccent)
+                                .frame(width: 5, height: 5)
+                            Text("⚡️ 60FPS METAL ACTIVE")
+                                .font(.system(size: 7, weight: .black, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.cyanAccent)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(3)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(ActionLensTheme.cyanAccent.opacity(0.5), lineWidth: 0.8)
+                        )
+                        .padding(.top, 10 * scale)
+                        Spacer()
+                    }
+                    .frame(width: frameW, height: frameH)
+                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
                 }
                 
                 // Heatmap Gaussian KDE Layer (Feature 5)
