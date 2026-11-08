@@ -24,10 +24,10 @@ public struct TelemetryMatrixView: View {
                     ForEach(0..<groupTitles.count, id: \.self) { index in
                         Button(action: { manager.telemetryMatrixGroup = index }) {
                             Text(groupTitles[index])
-                                .font(.system(size: 10, weight: manager.telemetryMatrixGroup == index ? .bold : .medium, design: .monospaced))
+                                .font(.system(size: 11, weight: manager.telemetryMatrixGroup == index ? .bold : .medium, design: .monospaced))
                                 .foregroundColor(manager.telemetryMatrixGroup == index ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4.5)
                                 .background(manager.telemetryMatrixGroup == index ? ActionLensTheme.cyanAccent.opacity(0.18) : ActionLensTheme.cardBackground)
                                 .cornerRadius(5)
                                 .overlay(
@@ -47,18 +47,18 @@ public struct TelemetryMatrixView: View {
                     .fill(ActionLensTheme.mintAccent)
                     .frame(width: 6, height: 6)
                 
-                Text("45 VECTORS LIVE • REFRESH RATE: 4ms / EVDEV")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                Text("52 VECTORS LIVE • REFRESH RATE: 4ms / EVDEV")
+                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                     .foregroundColor(ActionLensTheme.mintAccent)
                 
                 Spacer()
                 
                 Text(manager.activeDeviceView == "Phone" ? "ADB: \(manager.phoneModel)" : "HOST: macOS")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textTertiary)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4.5)
             .background(ActionLensTheme.cardBackground.opacity(0.6))
             .cornerRadius(6)
             
@@ -296,43 +296,43 @@ public struct TelemetryMatrixView: View {
     
     // Sleek Modular HUD Card
     private func telemetryCard(id: String, name: String, value: String, sub: String, color: Color, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 7) {
                 Text(id)
-                    .font(.system(size: 9, weight: .black, design: .monospaced))
+                    .font(.system(size: 10, weight: .black, design: .monospaced))
                     .foregroundColor(color)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
                     .background(color.opacity(0.15))
-                    .cornerRadius(3)
+                    .cornerRadius(ActionLensTheme.tacticalRadius)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11.5))
                     .foregroundColor(color)
                 
                 Text(name)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(ActionLensTheme.textPrimary)
                 
                 Spacer()
             }
             
             Text(value)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundColor(color)
                 .lineLimit(1)
             
             Text(sub)
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(size: 10.5, design: .monospaced))
                 .foregroundColor(ActionLensTheme.textSecondary)
                 .lineLimit(1)
         }
-        .padding(8)
+        .padding(9)
         .background(ActionLensTheme.cardBackground)
-        .cornerRadius(8)
+        .cornerRadius(ActionLensTheme.tacticalRadius)
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(ActionLensTheme.border.opacity(0.6), lineWidth: 0.6)
+            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                .stroke(ActionLensTheme.border.opacity(0.8), lineWidth: 0.8)
         )
     }
 }
