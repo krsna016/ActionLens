@@ -73,11 +73,11 @@ public struct ClickRadarView: View {
             }
             .padding(.horizontal, 4)
             
-            // Swipe Style Switcher (Switch between Earlier Linear Vector and Current Polyline Curve)
+            // Swipe Style Switcher (Switch between Linear Vector and Polyline Curve)
             if isPhoneCanvas {
                 HStack(spacing: 6) {
                     Text("SWIPE STYLE:")
-                        .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                        .font(.system(size: 9.5, weight: .black, design: .monospaced))
                         .foregroundColor(ActionLensTheme.textTertiary)
                     
                     Button(action: {
@@ -87,14 +87,19 @@ public struct ClickRadarView: View {
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
-                            Text("Curve & Vertex (Current)")
+                            Text("Curve & Vertex")
+                                .lineLimit(1)
                         }
-                        .font(.system(size: 9, weight: manager.swipeRenderStyle == "Polyline Curve" ? .bold : .medium, design: .monospaced))
+                        .font(.system(size: 11, weight: manager.swipeRenderStyle == "Polyline Curve" ? .bold : .medium, design: .monospaced))
                         .foregroundColor(manager.swipeRenderStyle == "Polyline Curve" ? ActionLensTheme.amberAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(manager.swipeRenderStyle == "Polyline Curve" ? ActionLensTheme.amberAccent.opacity(0.18) : Color.white.opacity(0.04))
-                        .cornerRadius(4)
+                        .cornerRadius(ActionLensTheme.tacticalRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                .stroke(manager.swipeRenderStyle == "Polyline Curve" ? ActionLensTheme.amberAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
+                        )
                     }
                     .buttonStyle(.plain)
                     
@@ -105,14 +110,19 @@ public struct ClickRadarView: View {
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.right")
-                            Text("Linear Vector (Earlier)")
+                            Text("Linear Vector")
+                                .lineLimit(1)
                         }
-                        .font(.system(size: 9, weight: manager.swipeRenderStyle == "Linear Vector" ? .bold : .medium, design: .monospaced))
+                        .font(.system(size: 11, weight: manager.swipeRenderStyle == "Linear Vector" ? .bold : .medium, design: .monospaced))
                         .foregroundColor(manager.swipeRenderStyle == "Linear Vector" ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(manager.swipeRenderStyle == "Linear Vector" ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
-                        .cornerRadius(4)
+                        .cornerRadius(ActionLensTheme.tacticalRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                .stroke(manager.swipeRenderStyle == "Linear Vector" ? ActionLensTheme.cyanAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
+                        )
                     }
                     .buttonStyle(.plain)
                     
@@ -121,152 +131,231 @@ public struct ClickRadarView: View {
                 .padding(.horizontal, 4)
             }
             
-            // Secondary HUD Controls: Heatmap & Digital Twin
-            HStack(spacing: 8) {
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        manager.isHeatmapEnabled.toggle()
-                    }
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: manager.isHeatmapEnabled ? "flame.fill" : "flame")
-                        Text(manager.isHeatmapEnabled ? "Heatmap: ON" : "Heatmap: OFF")
-                    }
-                    .font(.system(size: 9, weight: manager.isHeatmapEnabled ? .bold : .medium, design: .monospaced))
-                    .foregroundColor(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent : ActionLensTheme.textSecondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent.opacity(0.18) : Color.white.opacity(0.04))
-                    .cornerRadius(4)
-                }
-                .buttonStyle(.plain)
-                
-                // Predictive Intent Engine Toggle Button (Feature 3)
-                Button(action: {
-                    manager.isIntentPredictionEnabled.toggle()
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: manager.isIntentPredictionEnabled ? "target" : "scope")
-                        Text(manager.isIntentPredictionEnabled ? "Intent: ON" : "Intent: OFF")
-                    }
-                    .font(.system(size: 9, weight: manager.isIntentPredictionEnabled ? .bold : .medium, design: .monospaced))
-                    .foregroundColor(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
-                    .cornerRadius(4)
-                }
-                .buttonStyle(.plain)
-                
-                if isPhoneCanvas {
-                    // Phone Canvas Resize Selector
-                    Button(action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                            if manager.phoneScreenScale < 1.2 {
-                                manager.phoneScreenScale = 1.35
-                            } else if manager.phoneScreenScale < 1.5 {
-                                manager.phoneScreenScale = 1.7
-                            } else {
-                                manager.phoneScreenScale = 1.0
+            // Secondary HUD Controls: Multi-Tier Grid (Wrap-Free, Crisp Fonts)
+            if isPhoneCanvas {
+                VStack(spacing: 6) {
+                    // Row 1: Overlays, Intent & Scale (3 Equal Width Buttons)
+                    HStack(spacing: 6) {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                manager.isHeatmapEnabled.toggle()
                             }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: manager.isHeatmapEnabled ? "flame.fill" : "flame")
+                                    .font(.system(size: 10))
+                                Text(manager.isHeatmapEnabled ? "HEATMAP: ON" : "HEATMAP: OFF")
+                                    .lineLimit(1)
+                            }
+                            .font(.system(size: 10.5, weight: manager.isHeatmapEnabled ? .bold : .medium, design: .monospaced))
+                            .foregroundColor(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent : ActionLensTheme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent.opacity(0.18) : Color.white.opacity(0.04))
+                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                    .stroke(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
+                            )
                         }
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            Text(manager.phoneScreenScale < 1.2 ? "Size: 1x" : (manager.phoneScreenScale < 1.5 ? "Size: 1.4x" : "Size: 1.7x"))
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            manager.isIntentPredictionEnabled.toggle()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: manager.isIntentPredictionEnabled ? "target" : "scope")
+                                    .font(.system(size: 10))
+                                Text(manager.isIntentPredictionEnabled ? "INTENT: ON" : "INTENT: OFF")
+                                    .lineLimit(1)
+                            }
+                            .font(.system(size: 10.5, weight: manager.isIntentPredictionEnabled ? .bold : .medium, design: .monospaced))
+                            .foregroundColor(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
+                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                    .stroke(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
+                            )
                         }
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(ActionLensTheme.amberAccent)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(ActionLensTheme.amberAccent.opacity(0.15))
-                        .cornerRadius(4)
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                if manager.phoneScreenScale < 1.2 {
+                                    manager.phoneScreenScale = 1.35
+                                } else if manager.phoneScreenScale < 1.5 {
+                                    manager.phoneScreenScale = 1.7
+                                } else {
+                                    manager.phoneScreenScale = 1.0
+                                }
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 10))
+                                Text(manager.phoneScreenScale < 1.2 ? "SCALE: 1x" : (manager.phoneScreenScale < 1.5 ? "SCALE: 1.4x" : "SCALE: 1.7x"))
+                                    .lineLimit(1)
+                            }
+                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.amberAccent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(ActionLensTheme.amberAccent.opacity(0.15))
+                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                    .stroke(ActionLensTheme.amberAccent.opacity(0.5), lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 4)
                     
+                    // Row 2: Live Screen Mirroring & Canvas Maintenance (3 Equal Width Buttons)
+                    HStack(spacing: 6) {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                manager.isDigitalTwinEnabled.toggle()
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent : Color.gray)
+                                    .frame(width: 6, height: 6)
+                                Text(manager.isDigitalTwinEnabled ? "TWIN: LIVE" : "TWIN: OFF")
+                                    .lineLimit(1)
+                            }
+                            .font(.system(size: 10.5, weight: manager.isDigitalTwinEnabled ? .bold : .medium, design: .monospaced))
+                            .foregroundColor(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent : ActionLensTheme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent.opacity(0.18) : Color.white.opacity(0.04))
+                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                    .stroke(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                manager.toggleScrcpyTwin()
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 10))
+                                Text(manager.isScrcpyRunning ? "SCRCPY: 60FPS" : "SCRCPY: OFF")
+                                    .lineLimit(1)
+                            }
+                            .font(.system(size: 10.5, weight: manager.isScrcpyRunning ? .bold : .medium, design: .monospaced))
+                            .foregroundColor(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent.opacity(0.22) : Color.white.opacity(0.04))
+                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                    .stroke(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                manager.clearScreenCanvasOverlays()
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "eraser.line.dashed")
+                                    .font(.system(size: 10))
+                                Text("FLUSH")
+                                    .lineLimit(1)
+                            }
+                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.amberAccent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(ActionLensTheme.amberAccent.opacity(0.15))
+                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                    .stroke(ActionLensTheme.amberAccent.opacity(0.5), lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Flush on-screen radar pings and clutter (preserves telemetry database)")
+                    }
+                    .padding(.horizontal, 4)
+                }
+            } else {
+                // Mac Canvas Controls
+                HStack(spacing: 6) {
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {
-                            manager.isDigitalTwinEnabled.toggle()
+                            manager.isHeatmapEnabled.toggle()
                         }
                     }) {
                         HStack(spacing: 4) {
-                            Circle()
-                                .fill(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent : Color.gray)
-                                .frame(width: 5, height: 5)
-                            Text(manager.isDigitalTwinEnabled ? "Digital Twin: LIVE" : "Digital Twin: OFF")
+                            Image(systemName: manager.isHeatmapEnabled ? "flame.fill" : "flame")
+                                .font(.system(size: 10))
+                            Text(manager.isHeatmapEnabled ? "HEATMAP: ON" : "HEATMAP: OFF")
+                                .lineLimit(1)
                         }
-                        .font(.system(size: 9, weight: manager.isDigitalTwinEnabled ? .bold : .medium, design: .monospaced))
-                        .foregroundColor(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent.opacity(0.18) : Color.white.opacity(0.04))
-                        .cornerRadius(4)
-                    }
-                    .buttonStyle(.plain)
-                    
-                    // scrcpy 60FPS Hardware Mirror Toggle
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            manager.toggleScrcpyTwin()
-                        }
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "bolt.fill")
-                                .font(.system(size: 8))
-                            Text(manager.isScrcpyRunning ? "scrcpy: 60FPS" : "scrcpy: OFF")
-                        }
-                        .font(.system(size: 9, weight: manager.isScrcpyRunning ? .bold : .medium, design: .monospaced))
-                        .foregroundColor(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent.opacity(0.22) : Color.white.opacity(0.04))
-                        .cornerRadius(4)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(manager.isScrcpyRunning ? ActionLensTheme.cyanAccent.opacity(0.6) : Color.clear, lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    
-                    // Flush Radar Canvas Clutter (Retains Telemetry Database)
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            manager.clearScreenCanvasOverlays()
-                        }
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "eraser.line.dashed")
-                                .font(.system(size: 8))
-                            Text("FLUSH")
-                        }
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(ActionLensTheme.amberAccent)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(ActionLensTheme.amberAccent.opacity(0.15))
+                        .font(.system(size: 11, weight: manager.isHeatmapEnabled ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4.5)
+                        .background(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent.opacity(0.18) : Color.white.opacity(0.04))
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                         .overlay(
                             RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
-                                .stroke(ActionLensTheme.amberAccent.opacity(0.5), lineWidth: 0.8)
+                                .stroke(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
                         )
                     }
                     .buttonStyle(.plain)
-                    .help("Flush on-screen radar pings and clutter (preserves telemetry database)")
-                } else {
+                    
+                    Button(action: {
+                        manager.isIntentPredictionEnabled.toggle()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: manager.isIntentPredictionEnabled ? "target" : "scope")
+                                .font(.system(size: 10))
+                            Text(manager.isIntentPredictionEnabled ? "INTENT: ON" : "INTENT: OFF")
+                                .lineLimit(1)
+                        }
+                        .font(.system(size: 11, weight: manager.isIntentPredictionEnabled ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4.5)
+                        .background(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
+                        .cornerRadius(ActionLensTheme.tacticalRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                .stroke(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent.opacity(0.6) : ActionLensTheme.border, lineWidth: 0.8)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             manager.clearScreenCanvasOverlays()
                         }
                     }) {
-                        HStack(spacing: 3) {
+                        HStack(spacing: 4) {
                             Image(systemName: "eraser.line.dashed")
-                                .font(.system(size: 8))
+                                .font(.system(size: 10))
                             Text("FLUSH RADAR")
+                                .lineLimit(1)
                         }
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
                         .foregroundColor(ActionLensTheme.amberAccent)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4.5)
                         .background(ActionLensTheme.amberAccent.opacity(0.15))
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                         .overlay(
@@ -276,22 +365,22 @@ public struct ClickRadarView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Flush on-screen radar pings and clutter (preserves telemetry database)")
+                    
+                    if manager.isHeatmapEnabled {
+                        Spacer()
+                        Text("DEAD-ZONE: \(Int(manager.deadZoneCoveragePct))%")
+                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.coralAccent)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                    } else {
+                        Spacer()
+                    }
                 }
-                
-                if manager.isHeatmapEnabled {
-                    Spacer()
-                    Text("DEAD-ZONE: \(Int(manager.deadZoneCoveragePct))%")
-                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                        .foregroundColor(ActionLensTheme.coralAccent)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.black.opacity(0.5))
-                        .cornerRadius(4)
-                } else {
-                    Spacer()
-                }
+                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 4)
             
             // Screen Radar Canvas (Switches between Mac widescreen and Phone portrait mockup)
             if isPhoneCanvas {
@@ -793,7 +882,7 @@ public struct ClickRadarView: View {
     private var recentInterceptionsList: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("RECENT SPATIAL INTERCEPTIONS")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundColor(ActionLensTheme.textSecondary)
             
             ScrollView {
@@ -811,46 +900,46 @@ public struct ClickRadarView: View {
                         HStack(spacing: 8) {
                             // Device Tag
                             Image(systemName: record.deviceTarget.icon)
-                                .font(.system(size: 10))
+                                .font(.system(size: 11))
                                 .foregroundColor(record.deviceTarget == .phone ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
                             
                             if let swipe = record.swipeMetadata {
                                 Image(systemName: swipe.gestureShape.contains("U-Shape") ? "arrow.triangle.swap" : swipe.direction.icon)
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(ActionLensTheme.amberAccent)
                                 Text(swipe.gestureShape != "Linear Swipe" ? swipe.gestureShape : swipe.direction.rawValue)
-                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.amberAccent)
                                 if !swipe.vertices.isEmpty {
                                     Text("[\(swipe.vertices.count)v]")
-                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                                         .foregroundColor(ActionLensTheme.mintAccent)
-                                        .padding(.horizontal, 3)
-                                        .padding(.vertical, 0.5)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
                                         .background(ActionLensTheme.mintAccent.opacity(0.15))
                                         .cornerRadius(2)
                                 }
                                 Text("(\(Int(swipe.distance))px)")
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(.system(size: 10.5, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.textSecondary)
                             } else if let click = record.clickMetadata {
                                 Text("(\(Int(click.x)), \(Int(click.y)))")
-                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                                     .foregroundColor(ActionLensTheme.textPrimary)
                             }
                             
                             Text(record.appName)
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(ActionLensTheme.textSecondary)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
                                 .background(Color.white.opacity(0.08))
                                 .cornerRadius(3)
                             
                             Spacer()
                             
                             Text(record.formattedTime)
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(.system(size: 10, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.textTertiary)
                         }
                         .padding(.horizontal, 8)
@@ -872,22 +961,22 @@ public struct ClickRadarView: View {
     private var dualDeviceKeystrokeHud: some View {
         HStack(spacing: 8) {
             // Mac Keystrokes Pill
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Image(systemName: "laptopcomputer")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundColor(ActionLensTheme.amberAccent)
                 Text("MAC:")
-                    .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                    .font(.system(size: 10.5, weight: .black, design: .monospaced))
                     .foregroundColor(ActionLensTheme.amberAccent)
                 Text("\(Int(manager.currentWPM)) WPM")
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                 Text("(\(manager.currentFlowState.rawValue))")
-                    .font(.system(size: 7.5, design: .monospaced))
+                    .font(.system(size: 9.5, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textTertiary)
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
             .background(Color.black.opacity(0.45))
             .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(
@@ -898,22 +987,22 @@ public struct ClickRadarView: View {
             Spacer()
             
             // Phone Keystrokes Pill
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Image(systemName: "iphone")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundColor(ActionLensTheme.mintAccent)
                 Text("PHONE:")
-                    .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                    .font(.system(size: 10.5, weight: .black, design: .monospaced))
                     .foregroundColor(ActionLensTheme.mintAccent)
                 Text(String(format: "%.0fms Dwell", manager.currentSensorState.keystrokeDwellTimeMs))
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                 Text(String(format: "%.0fms Flight", manager.currentSensorState.keystrokeFlightTimeMs))
-                    .font(.system(size: 8.5, design: .monospaced))
+                    .font(.system(size: 10.5, design: .monospaced))
                     .foregroundColor(ActionLensTheme.cyanAccent)
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
             .background(Color.black.opacity(0.45))
             .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(

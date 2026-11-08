@@ -88,6 +88,12 @@ public class SessionManager: ObservableObject {
     @Published public var liveAcousticSpectrum: AcousticSpectrumState = AcousticSpectrumState()
     @Published public var rfSpatialMesh: RFSpatialMeshState = RFSpatialMeshState()
     
+    // Autonomous Algorithmic Cognitive Twin State (Feature Suite Part 2)
+    @Published public var activeCognitiveTwin: CognitiveTwinProfile? = nil
+    @Published public var isAutoSimulationEnabled: Bool = false
+    @Published public var latestSimulatedActuation: SimulatedActuationEvent? = nil
+    @Published public var exportedGraphJSON: String? = nil
+    
     // UI Navigation State
     @Published public var selectedFilter: String = "All Events"
     @Published public var feedDisplayMode: String = "Tactical" // "Tactical" vs "Narrative"
@@ -362,6 +368,31 @@ public class SessionManager: ObservableObject {
         }
         
         updateSessionStory()
+        
+        // Ingest into Autonomous User Cognitive Twin Engine (Part 2)
+        let bioArc = record.swipeMetadata?.biometrics.curvatureArcDeg ?? 14.2
+        let dwell = currentSensorState.keystrokeDwellTimeMs > 0 ? currentSensorState.keystrokeDwellTimeMs : 68.4
+        let flight = currentSensorState.keystrokeFlightTimeMs > 0 ? currentSensorState.keystrokeFlightTimeMs : 94.2
+        let press = currentSensorState.touchPressureForce > 0 ? currentSensorState.touchPressureForce : 0.54
+        
+        let profile = UserCognitiveTwinEngine.shared.ingestActuation(
+            dwellMs: dwell,
+            flightMs: flight,
+            pressure: press,
+            curvature: bioArc,
+            wpm: currentWPM,
+            ambientDb: currentSensorState.acousticDecibelDba
+        )
+        self.activeCognitiveTwin = profile
+        
+        // Predictive Auto-Actuation Simulation
+        if isAutoSimulationEnabled, let intent = activePredictiveIntent {
+            self.latestSimulatedActuation = UserCognitiveTwinEngine.shared.simulatePredictiveAutoActuation(
+                targetX: intent.projectedTargetX,
+                targetY: intent.projectedTargetY,
+                confidencePct: intent.trajectoryConfidencePct
+            )
+        }
     }
     
     public func updateSessionStory() {
@@ -571,6 +602,29 @@ public class SessionManager: ObservableObject {
         }
         scrcpyProcess = nil
         isScrcpyRunning = false
+    }
+    
+    // MARK: - Cognitive Twin Export & Simulation Controls
+    public func triggerExportPersonaGraph() -> URL? {
+        let (url, json) = UserCognitiveTwinEngine.shared.exportPersonaGraphJSON()
+        if url != nil {
+            self.exportedGraphJSON = json
+            self.toastMessage = "Persona Graph (.json) exported successfully"
+        }
+        return url
+    }
+    
+    public func triggerExportCoreMLWeights() -> URL? {
+        let (url, _) = UserCognitiveTwinEngine.shared.exportCoreMLPersonaWeights()
+        if url != nil {
+            self.toastMessage = "CoreML Neural Weights (.mlmodel) exported"
+        }
+        return url
+    }
+    
+    public func toggleAutoSimulation() {
+        isAutoSimulationEnabled.toggle()
+        toastMessage = isAutoSimulationEnabled ? "⚡️ Auto-Actuation Simulation ACTIVE" : "Simulation Mode OFF"
     }
     
     deinit {

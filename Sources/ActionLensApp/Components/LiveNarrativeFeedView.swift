@@ -90,15 +90,16 @@ public struct LiveNarrativeFeedView: View {
                         manager.feedDisplayMode = (manager.feedDisplayMode == "Tactical" ? "Narrative" : "Tactical")
                     }
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: manager.feedDisplayMode == "Tactical" ? "list.bullet.rectangle" : "text.quote")
-                            .font(.system(size: 8.5))
+                            .font(.system(size: 10))
                         Text(manager.feedDisplayMode == "Tactical" ? "TACTICAL" : "NARRATIVE")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .lineLimit(1)
                     }
                     .foregroundColor(ActionLensTheme.cyanAccent)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4.5)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
                     .background(ActionLensTheme.cyanAccent.opacity(0.12))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -122,7 +123,7 @@ public struct LiveNarrativeFeedView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                 .frame(width: 130)
             }
             .padding(.horizontal, 4)
