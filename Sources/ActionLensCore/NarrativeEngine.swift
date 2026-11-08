@@ -238,6 +238,14 @@ public class NarrativeEngine {
         return "You switched your attention from \(from) over to \(to)\(cleanWin)."
     }
     
+    public func narratePhoneAppSwitch(from: String, to: String, phoneModel: String) -> String {
+        let model = phoneModel.isEmpty ? "your phone" : phoneModel
+        if from.isEmpty || from == to {
+            return "📱 On \(model), you brought \(to) into active frontmost focus."
+        }
+        return "📱 On \(model), you switched your attention from \(from) over to \(to)."
+    }
+    
     // MARK: - Cumulative Story Generation
     public func composeSessionNarrative(
         records: [ActionRecord],

@@ -30,6 +30,11 @@ public class PhoneTracker {
     private var touchStartY: Double = 0.0
     private var touchStartTime: Date = Date()
     
+    // Adaptive App Focus & Power-Aware State (Feature 1)
+    private var lastRecordedApp: String = ""
+    private var isScreenInteractive: Bool = true
+    private var lastWakefulnessCheck: Date = Date.distantPast
+    
     // Micro-Biometric Touch Kinetics (Signals 3 - 8)
     private var currentPressure: Double = 0.54
     private var currentTouchMajor: Double = 26.0
@@ -210,19 +215,40 @@ public class PhoneTracker {
     
     private func startAppFocusPolling() {
         appCheckTimer?.invalidate()
-        appCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        appCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             self?.queryForegroundApp()
         }
     }
     
-    private func queryForegroundApp() {
+    public func queryForegroundApp() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self, self.isConnected else { return }
+            let now = Date()
+            
+            // 1. Power & Wakefulness Screen-State Check (every ~4s or when woke)
+            if now.timeIntervalSince(self.lastWakefulnessCheck) >= 4.0 {
+                self.lastWakefulnessCheck = now
+                let (powerOut, _) = self.runAdb(["-s", self.phoneSerial, "shell", "dumpsys power | grep -E 'mWakefulness=|mInteractive='"])
+                if powerOut.contains("mWakefulness=Dozing") || powerOut.contains("mWakefulness=Asleep") || powerOut.contains("mInteractive=false") {
+                    self.isScreenInteractive = false
+                    return
+                } else if powerOut.contains("mWakefulness=Awake") || powerOut.contains("mInteractive=true") {
+                    self.isScreenInteractive = true
+                }
+            }
+            
+            // Skip expensive WindowManager inspection if phone screen is locked/asleep
+            guard self.isScreenInteractive else { return }
+            
+            // 2. High-speed window focus resolution
             let (out, _) = self.runAdb(["-s", self.phoneSerial, "shell", "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'"])
             let cleaned = out.trimmingCharacters(in: .whitespacesAndNewlines)
             
             if cleaned.contains("NotificationShade") {
-                DispatchQueue.main.async { self.currentPhoneApp = "Notification Shade" }
+                let shade = "Notification Shade"
+                if self.currentPhoneApp != shade {
+                    DispatchQueue.main.async { self.currentPhoneApp = shade }
+                }
                 return
             }
             
@@ -233,8 +259,39 @@ public class PhoneTracker {
                     let pkg = String(line[match])
                     if !pkg.contains("android.view") && !pkg.contains("com.android.server") {
                         let friendly = self.friendlyAppName(for: pkg)
-                        DispatchQueue.main.async {
-                            self.currentPhoneApp = friendly
+                        
+                        if !friendly.isEmpty && friendly != self.lastRecordedApp {
+                            let prev = self.lastRecordedApp
+                            self.lastRecordedApp = friendly
+                            
+                            let narrative = NarrativeEngine.shared.narratePhoneAppSwitch(
+                                from: prev,
+                                to: friendly,
+                                phoneModel: self.phoneModel
+                            )
+                            
+                            let record = ActionRecord(
+                                timestamp: Date(),
+                                deviceTarget: .phone,
+                                type: .appSwitch,
+                                appName: friendly,
+                                windowTitle: friendly,
+                                narrativeEnglish: narrative,
+                                clickMetadata: nil,
+                                burstMetadata: nil,
+                                shortcutCombo: nil,
+                                swipeMetadata: nil,
+                                hardwareSnapshot: HardwareSensorTelemetry.shared.currentState
+                            )
+                            
+                            DispatchQueue.main.async {
+                                self.currentPhoneApp = friendly
+                                self.onAction(record)
+                            }
+                        } else if !friendly.isEmpty && self.currentPhoneApp != friendly {
+                            DispatchQueue.main.async {
+                                self.currentPhoneApp = friendly
+                            }
                         }
                         break
                     }
@@ -245,23 +302,32 @@ public class PhoneTracker {
     
     private func friendlyAppName(for package: String) -> String {
         let p = package.lowercased()
-        if p.contains("youtube") { return "YouTube" }
+        if p.contains("rgbremote") { return "RGB Remote Control" }
+        if p.contains("youtube") { return p.contains("revanced") ? "YouTube ReVanced" : "YouTube" }
         if p.contains("whatsapp") { return "WhatsApp" }
         if p.contains("telegram") { return "Telegram" }
+        if p.contains("syncthing") { return "Syncthing" }
+        if p.contains("termux") { return "Termux" }
+        if p.contains("discord") { return "Discord" }
+        if p.contains("brave") { return "Brave Browser" }
+        if p.contains("firefox") { return "Firefox" }
         if p.contains("chrome") { return "Google Chrome" }
         if p.contains("messaging") || p.contains("mms") { return "Messages" }
         if p.contains("settings") { return "Settings" }
         if p.contains("coloros") || p.contains("oppo.launcher") || p.contains("heytap") || p.contains("realme") { return "Realme Home" }
         if p.contains("bbk") || p.contains("vivo") || p.contains("funtouch") || p.contains("originos") { return "Vivo Home" }
         if p.contains("sec.android.app.launcher") || p.contains("samsung") || p.contains("oneui") { return "Samsung Home" }
-        if p.contains("miui") || p.contains("xiaomi") || p.contains("home") || p.contains("launcher") { return "Home Screen" }
+        if p.contains("miui.home") || p.contains("xiaomi") || p.contains("launcher") { return "Home Screen" }
         if p.contains("spotify") { return "Spotify" }
         if p.contains("instagram") { return "Instagram" }
         if p.contains("twitter") || p.contains(".x.") { return "X (Twitter)" }
         if p.contains("reddit") { return "Reddit" }
         if p.contains("camera") { return "Camera" }
-        if p.contains("gallery") { return "Gallery" }
+        if p.contains("gallery") || p.contains("photos") { return "Photos / Gallery" }
         if p.contains("gm") || p.contains("gmail") { return "Gmail" }
+        if p.contains("file") || p.contains("documentsui") { return "File Manager" }
+        if p.contains("clock") || p.contains("deskclock") { return "Clock" }
+        if p.contains("calculator") { return "Calculator" }
         if p.contains("connectphone") { return "ConnectPhone" }
         
         if let last = package.components(separatedBy: ".").last {
@@ -444,6 +510,7 @@ public class PhoneTracker {
     
     private func handleTouchStart() {
         isTouching = true
+        isScreenInteractive = true
         hasInitialCoords = false
         touchStartTime = Date()
         trajectoryPoints.removeAll(keepingCapacity: true)
@@ -856,6 +923,10 @@ public class PhoneTracker {
                 self?.onAction(record)
             }
         }
+        
+        // Immediately query foreground app on touch up to capture app switches without polling latency
+        isScreenInteractive = true
+        queryForegroundApp()
     }
     
     private func runAdb(_ args: [String]) -> (String, Int32) {

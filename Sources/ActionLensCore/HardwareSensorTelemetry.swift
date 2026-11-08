@@ -11,6 +11,10 @@ public class HardwareSensorTelemetry {
     private var timer: Timer?
     private var isRunning: Bool = false
     
+    public var activePhoneSerial: String? = nil
+    public var activeAdbPath: String? = "/Users/openfrontierlabs/.local/bin/adb"
+    private var lastPkgCheckTime: Date = Date.distantPast
+    
     private var previousBatteryTemp: Double = 31.4
     private var previousTempTimestamp: Date = Date()
     private var lastClipboardChangeCount: Int = -1
@@ -25,7 +29,8 @@ public class HardwareSensorTelemetry {
         
         sampleTelemetry()
         timer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: true) { [weak self] _ in
-            self?.sampleTelemetry()
+            guard let self = self else { return }
+            self.sampleTelemetry(phoneSerial: self.activePhoneSerial, adbPath: self.activeAdbPath)
         }
     }
     
@@ -37,16 +42,23 @@ public class HardwareSensorTelemetry {
     
     // MARK: - Telemetry Sampling Pass
     public func sampleTelemetry(phoneSerial: String? = nil, adbPath: String? = nil) {
-        sampleMacSubsystems()
-        
-        if let serial = phoneSerial, !serial.isEmpty, let adb = adbPath {
-            samplePhoneSubsystems(serial: serial, adbPath: adb)
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            self.sampleMacSubsystems()
+            
+            let serial = phoneSerial ?? self.activePhoneSerial
+            let adb = adbPath ?? self.activeAdbPath
+            if let s = serial, !s.isEmpty, let a = adb {
+                self.samplePhoneSubsystems(serial: s, adbPath: a)
+            }
+            
+            // Micro-oscillate sensor kinetics for live telemetry feedback
+            self.simulateMicroPhysics()
+            
+            DispatchQueue.main.async {
+                self.onUpdate?(self.currentState)
+            }
         }
-        
-        // Micro-oscillate sensor kinetics for live telemetry feedback
-        simulateMicroPhysics()
-        
-        onUpdate?(currentState)
     }
     
     // MARK: - Mac Subsystem Sampling
@@ -172,10 +184,13 @@ public class HardwareSensorTelemetry {
             }
         }
         
-        // 4. Installed Application Inventory
-        let (pkgOut, _) = runShellCommand("\(adbPath) -s \(serial) shell pm list packages -3 | wc -l")
-        if let count = Int(pkgOut.trimmingCharacters(in: .whitespacesAndNewlines)) {
-            currentState.installed3rdPartyAppsCount = max(count, 12)
+        // 4. Installed Application Inventory (Sampled once per 60s to minimize shell invocation overhead)
+        if now.timeIntervalSince(lastPkgCheckTime) > 60.0 {
+            lastPkgCheckTime = now
+            let (pkgOut, _) = runShellCommand("\(adbPath) -s \(serial) shell pm list packages -3 | wc -l")
+            if let count = Int(pkgOut.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                currentState.installed3rdPartyAppsCount = max(count, 12)
+            }
         }
     }
     

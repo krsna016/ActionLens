@@ -123,7 +123,11 @@ public class SessionManager: ObservableObject {
                         self?.phoneModel = pt.phoneModel
                         self?.phoneResolution = CGSize(width: pt.screenWidth, height: pt.screenHeight)
                         if connected {
+                            HardwareSensorTelemetry.shared.activePhoneSerial = pt.phoneSerial
+                            HardwareSensorTelemetry.shared.activeAdbPath = "/Users/openfrontierlabs/.local/bin/adb"
                             HardwareSensorTelemetry.shared.sampleTelemetry(phoneSerial: pt.phoneSerial, adbPath: "/Users/openfrontierlabs/.local/bin/adb")
+                        } else {
+                            HardwareSensorTelemetry.shared.activePhoneSerial = nil
                         }
                     }
                 }
