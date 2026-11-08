@@ -51,9 +51,9 @@ public struct LiveNarrativeFeedView: View {
             // Tactical Filter Bar & Mode Controls
             HStack(spacing: 8) {
                 // Search Field
-                HStack(spacing: 6) {
+                HStack(spacing: 7) {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundColor(ActionLensTheme.textTertiary)
                     TextField(
                         "Search telemetry stream...",
@@ -63,20 +63,20 @@ public struct LiveNarrativeFeedView: View {
                         )
                     )
                     .textFieldStyle(.plain)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12.5, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textPrimary)
                     
                     if !manager.searchText.isEmpty {
                         Button(action: { manager.searchText = "" }) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 10))
+                                .font(.system(size: 11))
                                 .foregroundColor(ActionLensTheme.textTertiary)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
                 .background(Color.black.opacity(0.45))
                 .cornerRadius(ActionLensTheme.tacticalRadius)
                 .overlay(
@@ -92,14 +92,14 @@ public struct LiveNarrativeFeedView: View {
                 }) {
                     HStack(spacing: 5) {
                         Image(systemName: manager.feedDisplayMode == "Tactical" ? "list.bullet.rectangle" : "text.quote")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                         Text(manager.feedDisplayMode == "Tactical" ? "TACTICAL" : "NARRATIVE")
-                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                             .lineLimit(1)
                     }
                     .foregroundColor(ActionLensTheme.cyanAccent)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
                     .background(ActionLensTheme.cyanAccent.opacity(0.12))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                     .overlay(
@@ -123,8 +123,8 @@ public struct LiveNarrativeFeedView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                .frame(width: 130)
+                .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                .frame(width: 140)
             }
             .padding(.horizontal, 4)
             
@@ -169,70 +169,70 @@ struct NarrativeCardView: View {
     let displayMode: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             // Header: Device Tag + Time + App + Type Tag
-            HStack(spacing: 7) {
+            HStack(spacing: 8) {
                 // Device Icon
                 Image(systemName: record.deviceTarget.icon)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(record.deviceTarget == .phone ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
                 
                 Text(record.deviceTarget.rawValue.uppercased())
-                    .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
                     .foregroundColor(record.deviceTarget == .phone ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2.5)
                     .background((record.deviceTarget == .phone ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent).opacity(0.15))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                 
                 Text(record.formattedTime)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(.system(size: 12.5, weight: .medium, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textTertiary)
                 
                 Text(record.appName)
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .font(.system(size: 13.5, weight: .bold, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textPrimary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2.5)
                     .background(Color.white.opacity(0.08))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
                 
                 Spacer()
                 
                 Text(record.type.rawValue.uppercased())
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(colorForType(record.type))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2.5)
                     .background(colorForType(record.type).opacity(0.15))
                     .cornerRadius(ActionLensTheme.tacticalRadius)
             }
             
             // Content Body: Switched between High-Density Tactical and Narrative Prose
             if displayMode == "Tactical" {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     if let click = record.clickMetadata {
                         Text("TARGET: [\(click.uiRole.isEmpty ? "Glass Surface" : click.uiRole)]")
-                            .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 13.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.cyanAccent)
                         
                         if !click.uiTitle.isEmpty {
                             Text("\"\(click.uiTitle)\"")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(size: 12.5, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.textSecondary)
                                 .lineLimit(1)
                         }
                     } else if let swipe = record.swipeMetadata {
                         Text("VEC: \(swipe.direction.rawValue.uppercased()) [\(Int(swipe.distance))px @ \(Int(swipe.velocity))px/s]")
-                            .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 13.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.amberAccent)
                     } else if let burst = record.burstMetadata {
                         Text("BURST: \(burst.charCount) CHARS @ \(Int(burst.wpm)) WPM [\(burst.flowState.rawValue)]")
-                            .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 13.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.mintAccent)
                     } else {
                         Text(record.narrativeEnglish)
-                            .font(.system(size: 11.5, design: .monospaced))
+                            .font(.system(size: 13.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textSecondary)
                             .lineLimit(1)
                     }
@@ -240,121 +240,121 @@ struct NarrativeCardView: View {
                 }
             } else {
                 Text(record.narrativeEnglish)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(ActionLensTheme.textPrimary)
-                    .lineSpacing(3)
+                    .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
             
             // Technical Footer Pills & Micro-Biometrics
             if let swipe = record.swipeMetadata {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 10) {
                         Label(swipe.direction.rawValue, systemImage: swipe.direction.icon)
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .font(.system(size: 12.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.amberAccent)
                         
                         Text("Dist: \(Int(swipe.distance))px")
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 12.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textSecondary)
                         
                         Text("Vel: \(Int(swipe.velocity))px/s")
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 12.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textTertiary)
                     }
                     let bio = swipe.biometrics
-                    HStack(spacing: 7) {
+                    HStack(spacing: 8) {
                         Label("Force: \(Int(bio.pressure * 100))%", systemImage: "gauge.with.dots.needle.bottom.50percent")
-                            .font(.system(size: 10.5, design: .monospaced))
+                            .font(.system(size: 11.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.coralAccent)
                         
                         Label("Arc: \(String(format: "%.1f°", bio.curvatureArcDeg))", systemImage: "arrow.triangle.turn.up.right.diamond")
-                            .font(.system(size: 10.5, design: .monospaced))
+                            .font(.system(size: 11.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.mintAccent)
                         
                         Label("Jitter: \(String(format: "%.1fpx", bio.jitterPx))", systemImage: "waveform.path.badge.plus")
-                            .font(.system(size: 10.5, design: .monospaced))
+                            .font(.system(size: 11.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.amberAccent)
                         
                         if bio.isHesitationReversal {
                             Label("Reversal", systemImage: "arrow.uturn.backward")
-                                .font(.system(size: 10.5, design: .monospaced))
+                                .font(.system(size: 11.5, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.coralAccent)
                         }
                     }
                 }
                 .padding(.top, 2)
             } else if let click = record.clickMetadata {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 10) {
                         Label("(\(Int(click.x)), \(Int(click.y)))", systemImage: "crosshair")
-                            .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.mintAccent)
                         
                         if !click.uiRole.isEmpty {
                             Label(click.uiRole, systemImage: "square.dashed")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(.system(size: 12.5, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.textSecondary)
                         }
                     }
                     if let bio = click.touchBiometrics {
-                        HStack(spacing: 7) {
+                        HStack(spacing: 8) {
                             Label("Force: \(Int(bio.pressure * 100))%", systemImage: "hand.tap")
-                                .font(.system(size: 10.5, design: .monospaced))
+                                .font(.system(size: 11.5, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.mintAccent)
                             
                             Label("Area: \(String(format: "%.1f", bio.surfaceAreaMm2))mm²", systemImage: "circle.circle")
-                                .font(.system(size: 10.5, design: .monospaced))
+                                .font(.system(size: 11.5, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.cyanAccent)
                             
                             Text("[\(bio.postureHeuristic)]")
-                                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 11.5, weight: .bold, design: .monospaced))
                                 .foregroundColor(ActionLensTheme.purpleAccent)
                         }
                     }
                 }
                 .padding(.top, 2)
             } else if let burst = record.burstMetadata {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 10) {
                         Label("\(burst.charCount) chars", systemImage: "character.cursor.ibeam")
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 12.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.amberAccent)
                         
                         Label("\(Int(burst.wpm)) WPM", systemImage: "gauge.with.needle")
-                            .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.mintAccent)
                         
                         Text("[\(burst.flowState.rawValue)]")
-                            .font(.system(size: 10.5, design: .monospaced))
+                            .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textSecondary)
                     }
                     let bio = burst.biometrics
-                    HStack(spacing: 7) {
+                    HStack(spacing: 8) {
                         Label("Dwell: \(Int(bio.dwellTimeMs))ms", systemImage: "timer")
-                            .font(.system(size: 10.5, design: .monospaced))
+                            .font(.system(size: 11.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.cyanAccent)
                         
                         Label("Flight: \(Int(bio.flightTimeMs))ms", systemImage: "arrow.right.to.line.compact")
-                            .font(.system(size: 10.5, design: .monospaced))
+                            .font(.system(size: 11.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.amberAccent)
                         
                         Label("Conf: \(Int(bio.confidenceScore * 100))%", systemImage: "brain.head.profile")
-                            .font(.system(size: 10.5, design: .monospaced))
+                            .font(.system(size: 11.5, design: .monospaced))
                             .foregroundColor(ActionLensTheme.mintAccent)
                     }
                 }
                 .padding(.top, 2)
             } else if let combo = record.shortcutCombo {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     Label("Key Combo: [\(combo)]", systemImage: "command")
-                        .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundColor(ActionLensTheme.purpleAccent)
                 }
                 .padding(.top, 2)
             }
         }
-        .padding(10)
+        .padding(11)
         .background(ActionLensTheme.cardBackground)
         .cornerRadius(ActionLensTheme.tacticalRadius)
         .overlay(

@@ -80,7 +80,14 @@ public class SessionManager: ObservableObject {
     private var scrcpyProcess: Process? = nil
     @Published public var phoneTwinImage: NSImage? = nil
     @Published public var twinFrameId: UUID = UUID()
-    @Published public var phoneScreenScale: Double = 1.0 // 1.0 = Compact, 1.35 = Large, 1.7 = Cinema
+    @Published public var phoneCanvasHeight: CGFloat = 280.0 {
+        didSet {
+            phoneScreenScale = Double(phoneCanvasHeight / 260.0)
+        }
+    }
+    @Published public var macCanvasHeight: CGFloat = 210.0
+    @Published public var phoneScreenScale: Double = 1.08 // Continuous dynamic scale from corner drag
+    public var radarDragBaseHeight: CGFloat = 0
     @Published public var psychometricState: PsychometricCognitiveState = PsychometricCognitiveState()
     @Published public var primaryFocusCentroid: CGPoint = CGPoint(x: 0.5, y: 0.5)
     @Published public var deadZoneCoveragePct: Double = 76.5
