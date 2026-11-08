@@ -73,13 +73,13 @@ public struct MainView: View {
                             
                             Spacer(minLength: 0)
                         }
-                        .frame(width: 380)
+                        .frame(width: manager.phoneScreenScale > 1.4 ? 430 : (manager.phoneScreenScale > 1.1 ? 405 : 380))
                     }
                     .padding(16)
                 }
             }
         }
-        .frame(minWidth: 880, minHeight: 600)
+        .frame(minWidth: manager.phoneScreenScale > 1.4 ? 940 : 880, minHeight: 600)
     }
     
     private func iconForTab(_ tab: String) -> String {

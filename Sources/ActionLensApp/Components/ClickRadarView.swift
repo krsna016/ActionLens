@@ -159,17 +159,41 @@ public struct ClickRadarView: View {
                 .buttonStyle(.plain)
                 
                 if isPhoneCanvas {
+                    // Phone Canvas Resize Selector
                     Button(action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            manager.isDigitalTwinEnabled.toggle()
-                            if manager.isDigitalTwinEnabled {
-                                manager.refreshDigitalTwin()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            if manager.phoneScreenScale < 1.2 {
+                                manager.phoneScreenScale = 1.35
+                            } else if manager.phoneScreenScale < 1.5 {
+                                manager.phoneScreenScale = 1.7
+                            } else {
+                                manager.phoneScreenScale = 1.0
                             }
                         }
                     }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            Text(manager.phoneScreenScale < 1.2 ? "Size: 1x" : (manager.phoneScreenScale < 1.5 ? "Size: 1.4x" : "Size: 1.7x"))
+                        }
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.amberAccent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(ActionLensTheme.amberAccent.opacity(0.15))
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.isDigitalTwinEnabled.toggle()
+                        }
+                    }) {
                         HStack(spacing: 4) {
-                            Image(systemName: manager.isDigitalTwinEnabled ? "camera.viewfinder" : "iphone.viewfinder")
-                            Text(manager.isDigitalTwinEnabled ? "Digital Twin: ON" : "Digital Twin: OFF")
+                            Circle()
+                                .fill(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent : Color.gray)
+                                .frame(width: 5, height: 5)
+                            Text(manager.isDigitalTwinEnabled ? "Digital Twin: LIVE" : "Digital Twin: OFF")
                         }
                         .font(.system(size: 9, weight: manager.isDigitalTwinEnabled ? .bold : .medium, design: .monospaced))
                         .foregroundColor(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent : ActionLensTheme.textSecondary)
@@ -205,6 +229,9 @@ public struct ClickRadarView: View {
             
             // Recent Spatial Interceptions (Clicks, Taps, and Swipes)
             recentInterceptionsList
+            
+            // Dual-Device Keystrokes HUD (Mac Cadence + Phone Micro-Biometrics)
+            dualDeviceKeystrokeHud
         }
         .padding(16)
         .background(ActionLensTheme.panelBackground)
@@ -326,19 +353,21 @@ public struct ClickRadarView: View {
     
     // MARK: - Phone Radar Canvas (Vertical Phone Frame with Taps & Swipes)
     private var phoneRadarCanvas: some View {
-        GeometryReader { geo in
-            let frameW: CGFloat = 136
-            let frameH: CGFloat = 256
+        let scale: CGFloat = CGFloat(manager.phoneScreenScale)
+        let frameW: CGFloat = 136 * scale
+        let frameH: CGFloat = 256 * scale
+        
+        return GeometryReader { geo in
             let offsetX = (geo.size.width - frameW) / 2
             let offsetY = (geo.size.height - frameH) / 2
             
             ZStack {
                 // Phone Bezel Frame
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 20 * scale)
                     .fill(Color.black.opacity(0.85))
-                    .frame(width: 140, height: 260)
+                    .frame(width: 140 * scale, height: 260 * scale)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
+                        RoundedRectangle(cornerRadius: 20 * scale)
                             .stroke(ActionLensTheme.mintAccent.opacity(0.4), lineWidth: 1.5)
                     )
                     .position(x: geo.size.width / 2, y: geo.size.height / 2)
@@ -349,8 +378,9 @@ public struct ClickRadarView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: frameW, height: frameH)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .clipShape(RoundedRectangle(cornerRadius: 18 * scale))
                         .overlay(Color.black.opacity(0.35))
+                        .id(manager.twinFrameId)
                         .position(x: geo.size.width / 2, y: geo.size.height / 2)
                 }
                 
@@ -362,10 +392,10 @@ public struct ClickRadarView: View {
                         RadialGradient(
                             colors: [ActionLensTheme.coralAccent.opacity(0.55), ActionLensTheme.amberAccent.opacity(0.25), Color.clear],
                             center: .center,
-                            startRadius: 2,
-                            endRadius: 24
+                            startRadius: 2 * scale,
+                            endRadius: 24 * scale
                         )
-                        .frame(width: 48, height: 48)
+                        .frame(width: 48 * scale, height: 48 * scale)
                         .position(x: px, y: py)
                         .blur(radius: 4)
                     }
@@ -374,8 +404,8 @@ public struct ClickRadarView: View {
                 // Camera Pill Notch
                 Capsule()
                     .fill(Color.white.opacity(0.2))
-                    .frame(width: 32, height: 6)
-                    .position(x: geo.size.width / 2, y: (geo.size.height / 2) - 118)
+                    .frame(width: 32 * scale, height: 6 * scale)
+                    .position(x: geo.size.width / 2, y: (geo.size.height / 2) - (118 * scale))
                 
                 // Phone Taps
                 ForEach(manager.clickPings.filter { $0.deviceTarget == .phone }) { ping in
@@ -613,7 +643,7 @@ public struct ClickRadarView: View {
                 }
             }
         }
-        .frame(height: 260)
+        .frame(height: 260 * CGFloat(manager.phoneScreenScale))
     }
     
     // MARK: - Recent Interceptions List
@@ -688,6 +718,61 @@ public struct ClickRadarView: View {
                 }
             }
             .frame(maxHeight: 120)
+        }
+    }
+    
+    // MARK: - Dual-Device Keystroke Dynamics HUD (Phone & Mac Keystrokes)
+    private var dualDeviceKeystrokeHud: some View {
+        HStack(spacing: 8) {
+            // Mac Keystrokes Pill
+            HStack(spacing: 5) {
+                Image(systemName: "laptopcomputer")
+                    .font(.system(size: 9))
+                    .foregroundColor(ActionLensTheme.amberAccent)
+                Text("MAC:")
+                    .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.amberAccent)
+                Text("\(Int(manager.currentWPM)) WPM")
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+                Text("(\(manager.currentFlowState.rawValue))")
+                    .font(.system(size: 7.5, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.textTertiary)
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.45))
+            .cornerRadius(5)
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(ActionLensTheme.amberAccent.opacity(0.35), lineWidth: 0.6)
+            )
+            
+            Spacer()
+            
+            // Phone Keystrokes Pill
+            HStack(spacing: 5) {
+                Image(systemName: "iphone")
+                    .font(.system(size: 9))
+                    .foregroundColor(ActionLensTheme.mintAccent)
+                Text("PHONE:")
+                    .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.mintAccent)
+                Text(String(format: "%.0fms Dwell", manager.currentSensorState.keystrokeDwellTimeMs))
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+                Text(String(format: "%.0fms Flight", manager.currentSensorState.keystrokeFlightTimeMs))
+                    .font(.system(size: 8.5, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.cyanAccent)
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.45))
+            .cornerRadius(5)
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(ActionLensTheme.mintAccent.opacity(0.35), lineWidth: 0.6)
+            )
         }
     }
 }

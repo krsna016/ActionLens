@@ -88,6 +88,79 @@ public struct KeystrokeTelemetryView: View {
             .background(ActionLensTheme.cardBackground)
             .cornerRadius(10)
             
+            // Phone Touchscreen Keyboard Micro-Biometrics Card (Signals 1 - 4)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("PHONE TOUCH KEYSTROKE DYNAMICS", systemImage: "iphone")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.mintAccent)
+                    Spacer()
+                    Text("ADB EVDEV LIVE")
+                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.mintAccent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(ActionLensTheme.mintAccent.opacity(0.12))
+                        .cornerRadius(3)
+                }
+                
+                HStack(spacing: 10) {
+                    // Signal 1: Dwell Time
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("KEY DWELL TIME")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textSecondary)
+                        Text(String(format: "%.1f ms", manager.currentSensorState.keystrokeDwellTimeMs))
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.mintAccent)
+                        Text("Typing Confidence")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(6)
+                    
+                    // Signal 2: Flight Time
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("FLIGHT MICRO-GAP")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textSecondary)
+                        Text(String(format: "%.1f ms", manager.currentSensorState.keystrokeFlightTimeMs))
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.cyanAccent)
+                        Text("Cognitive Cadence")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(6)
+                    
+                    // Signal 3: Glass Pressure
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("TOUCH FORCE")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textSecondary)
+                        Text(String(format: "%.0f%%", manager.currentSensorState.touchPressureForce * 100))
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.amberAccent)
+                        Text(manager.currentSensorState.touchPosture)
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(6)
+                }
+            }
+            .padding(14)
+            .background(ActionLensTheme.cardBackground)
+            .cornerRadius(10)
+            
             // Neuro-Cognitive Psychometric Radar Card (Shannon Entropy & Stress Pulse)
             VStack(alignment: .leading, spacing: 12) {
                 HStack {

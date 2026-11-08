@@ -66,9 +66,19 @@ public class SessionManager: ObservableObject {
     
     // Advanced Intense Feature Vectors (Features 2, 3, 4, 5, 6, 7)
     @Published public var isHeatmapEnabled: Bool = false
-    @Published public var isDigitalTwinEnabled: Bool = false
+    @Published public var isDigitalTwinEnabled: Bool = false {
+        didSet {
+            if isDigitalTwinEnabled {
+                startDigitalTwinStream()
+            } else {
+                stopDigitalTwinStream()
+            }
+        }
+    }
     @Published public var isIntentPredictionEnabled: Bool = true
     @Published public var phoneTwinImage: NSImage? = nil
+    @Published public var twinFrameId: UUID = UUID()
+    @Published public var phoneScreenScale: Double = 1.0 // 1.0 = Compact, 1.35 = Large, 1.7 = Cinema
     @Published public var psychometricState: PsychometricCognitiveState = PsychometricCognitiveState()
     @Published public var primaryFocusCentroid: CGPoint = CGPoint(x: 0.5, y: 0.5)
     @Published public var deadZoneCoveragePct: Double = 76.5
@@ -319,6 +329,15 @@ public class SessionManager: ObservableObject {
                     phoneSwipesList.removeFirst()
                 }
             }
+            if isDigitalTwinEnabled {
+                refreshDigitalTwin()
+            }
+            
+        case .appSwitch:
+            currentApp = effectiveRecord.appName
+            if isDigitalTwinEnabled && effectiveRecord.deviceTarget == .phone {
+                refreshDigitalTwin()
+            }
             
         case .keystrokeBurst:
             if let burst = record.burstMetadata {
@@ -423,12 +442,32 @@ public class SessionManager: ObservableObject {
         )
     }
     
-    public func refreshDigitalTwin() {
-        guard let pt = phoneTracker, pt.isConnected else { return }
-        pt.captureLiveTwinSnapshot { [weak self] image in
-            DispatchQueue.main.async {
-                self?.phoneTwinImage = image
+    private var twinStreamTimer: Timer?
+    
+    public func startDigitalTwinStream() {
+        stopDigitalTwinStream()
+        refreshDigitalTwin()
+        
+        // Continuous live mirror loop running every 0.65s while screen is awake
+        twinStreamTimer = Timer.scheduledTimer(withTimeInterval: 0.65, repeats: true) { [weak self] _ in
+            guard let self = self, self.isDigitalTwinEnabled else { return }
+            if let pt = self.phoneTracker, pt.isConnected, pt.isScreenInteractive {
+                self.refreshDigitalTwin()
             }
+        }
+    }
+    
+    public func stopDigitalTwinStream() {
+        twinStreamTimer?.invalidate()
+        twinStreamTimer = nil
+    }
+    
+    public func refreshDigitalTwin() {
+        guard isDigitalTwinEnabled, let pt = phoneTracker, pt.isConnected else { return }
+        pt.captureLiveTwinSnapshot { [weak self] image in
+            guard let self = self, let img = image else { return }
+            self.phoneTwinImage = img
+            self.twinFrameId = UUID()
         }
     }
     

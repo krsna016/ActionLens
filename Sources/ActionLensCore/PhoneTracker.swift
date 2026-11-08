@@ -33,8 +33,9 @@ public class PhoneTracker {
     
     // Adaptive App Focus & Power-Aware State (Feature 1)
     private var lastRecordedApp: String = ""
-    private var isScreenInteractive: Bool = true
+    public private(set) var isScreenInteractive: Bool = true
     private var lastWakefulnessCheck: Date = Date.distantPast
+    private let twinLock = NSLock()
     
     // Micro-Biometric Touch Kinetics (Signals 3 - 8)
     private var currentPressure: Double = 0.54
@@ -936,8 +937,17 @@ public class PhoneTracker {
             completion(nil)
             return
         }
+        guard twinLock.try() else {
+            // Drop duplicate request if previous screencap frame is still in transit
+            return
+        }
+        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { completion(nil); return }
+            defer { self?.twinLock.unlock() }
+            guard let self = self else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
             let p = Process()
             p.executableURL = URL(fileURLWithPath: self.adbPath)
             p.arguments = ["-s", self.phoneSerial, "exec-out", "screencap", "-p"]
@@ -948,9 +958,18 @@ public class PhoneTracker {
                 try p.run()
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 p.waitUntilExit()
-                if let img = NSImage(data: data) {
+                if let rawImage = NSImage(data: data) {
+                    // Optimized downscale to 280x560 to eliminate SwiftUI GPU texture stalling
+                    let targetSize = NSSize(width: 280, height: 560)
+                    let resized = NSImage(size: targetSize)
+                    resized.lockFocus()
+                    rawImage.draw(in: NSRect(origin: .zero, size: targetSize),
+                                  from: NSRect(origin: .zero, size: rawImage.size),
+                                  operation: .copy,
+                                  fraction: 1.0)
+                    resized.unlockFocus()
                     DispatchQueue.main.async {
-                        completion(img)
+                        completion(resized)
                     }
                     return
                 }
