@@ -90,6 +90,58 @@ public struct KeystrokeMicroBiometrics: Codable {
     }
 }
 
+// MARK: - Neuro-Cognitive Psychometric & Stress State
+public struct PsychometricCognitiveState: Codable {
+    public var shannonEntropyBits: Double = 1.48         // Statistical entropy of flight times (bits)
+    public var cognitiveLoadLevel: String = "Flow State" // "Deep Flow", "Nominal Focus", "Cognitive Friction"
+    public var stressAggressionIndex: Double = 0.14       // 0.0 to 1.0 (Pressure + Backspaces + Arc Jitter)
+    public var rhythmicConfidencePct: Double = 92.0       // 0 to 100%
+    public var hesitationDoubtScore: Double = 0.08        // Turbulence & Micro-Dwell ratio
+    public var motorFatigueIndex: Double = 0.11           // Cadence decay over session
+    
+    public init(
+        shannonEntropyBits: Double = 1.48,
+        cognitiveLoadLevel: String = "Flow State",
+        stressAggressionIndex: Double = 0.14,
+        rhythmicConfidencePct: Double = 92.0,
+        hesitationDoubtScore: Double = 0.08,
+        motorFatigueIndex: Double = 0.11
+    ) {
+        self.shannonEntropyBits = shannonEntropyBits
+        self.cognitiveLoadLevel = cognitiveLoadLevel
+        self.stressAggressionIndex = stressAggressionIndex
+        self.rhythmicConfidencePct = rhythmicConfidencePct
+        self.hesitationDoubtScore = hesitationDoubtScore
+        self.motorFatigueIndex = motorFatigueIndex
+    }
+}
+
+// MARK: - Spatial Heatmap Hit Point
+public struct SpatialHeatPoint: Identifiable, Codable {
+    public var id: UUID = UUID()
+    public let normalizedX: Double
+    public let normalizedY: Double
+    public let weight: Double
+    public let deviceTarget: DeviceTarget
+    public let timestamp: Date
+    
+    public init(
+        id: UUID = UUID(),
+        normalizedX: Double,
+        normalizedY: Double,
+        weight: Double = 1.0,
+        deviceTarget: DeviceTarget = .mac,
+        timestamp: Date = Date()
+    ) {
+        self.id = id
+        self.normalizedX = normalizedX
+        self.normalizedY = normalizedY
+        self.weight = weight
+        self.deviceTarget = deviceTarget
+        self.timestamp = timestamp
+    }
+}
+
 // MARK: - Comprehensive 45 Telemetry Vectors Snapshot
 public struct HardwareSensorState: Codable {
     // ── Group 1: Micro-Biometric & Interaction Dynamics (1 - 13) ──

@@ -3,11 +3,13 @@ import Cocoa
 public class KeystrokeInferenceEngine {
     public typealias ActionHandler = (ActionRecord) -> Void
     public typealias WPMUpdateHandler = (Double, FlowState) -> Void
+    public typealias PsychometricUpdateHandler = (PsychometricCognitiveState) -> Void
     
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private let onAction: ActionHandler
     private let onWPMUpdate: WPMUpdateHandler
+    public var onPsychometricUpdate: PsychometricUpdateHandler?
     
     // Typing burst accumulator
     private var burstCharCount: Int = 0
@@ -23,6 +25,7 @@ public class KeystrokeInferenceEngine {
     private var lastKeyUpTime: Date? = nil
     private var dwellTimes: [Double] = []
     private var flightTimes: [Double] = []
+    private var recentFlightTimes: [Double] = []
     
     public init(
         onAction: @escaping ActionHandler,
@@ -84,6 +87,11 @@ public class KeystrokeInferenceEngine {
             let flight = max(now.timeIntervalSince(lastUp) * 1000.0, 5.0)
             if flight < 1200.0 {
                 flightTimes.append(flight)
+                recentFlightTimes.append(flight)
+                if recentFlightTimes.count > 35 {
+                    recentFlightTimes.removeFirst()
+                }
+                computePsychometricEntropy()
             }
         }
         keyDownTimestamps[event.keyCode] = now
@@ -281,6 +289,63 @@ public class KeystrokeInferenceEngine {
         activeBurstApp = ""
         dwellTimes.removeAll()
         flightTimes.removeAll()
+    }
+    
+    // MARK: - Neuro-Cognitive Psychometric Shannon Entropy
+    private func computePsychometricEntropy() {
+        guard recentFlightTimes.count >= 5 else { return }
+        let n = Double(recentFlightTimes.count)
+        
+        // 6 Discrete Shannon Entropy Bins
+        var bins = [Double](repeating: 0.0, count: 6)
+        for f in recentFlightTimes {
+            if f < 60.0 { bins[0] += 1.0 }
+            else if f < 100.0 { bins[1] += 1.0 }
+            else if f < 150.0 { bins[2] += 1.0 }
+            else if f < 220.0 { bins[3] += 1.0 }
+            else if f < 320.0 { bins[4] += 1.0 }
+            else { bins[5] += 1.0 }
+        }
+        
+        var entropy = 0.0
+        for count in bins where count > 0 {
+            let p = count / n
+            entropy -= p * (log(p) / log(2.0))
+        }
+        
+        let roundedEntropy = Double(round(entropy * 100) / 100)
+        
+        let loadLevel: String
+        if roundedEntropy <= 1.45 {
+            loadLevel = "Deep Flow State"
+        } else if roundedEntropy <= 2.05 {
+            loadLevel = "Nominal Focus"
+        } else {
+            loadLevel = "Cognitive Friction"
+        }
+        
+        // Backspace ratio & Stress Index
+        let totalStrokes = max(burstCharCount + backspaceCount, 1)
+        let backspaceRatio = Double(backspaceCount) / Double(totalStrokes)
+        let stress = min(max(backspaceRatio * 1.4 + (roundedEntropy > 2.0 ? 0.25 : 0.08), 0.05), 0.95)
+        let confidence = max(min(100.0 - (roundedEntropy / 2.58) * 45.0 - (backspaceRatio * 40.0), 99.0), 15.0)
+        
+        let hesitationRatio = Double(recentFlightTimes.filter { $0 > 240.0 }.count) / n
+        let avgDwell = dwellTimes.isEmpty ? 58.0 : (dwellTimes.reduce(0, +) / Double(dwellTimes.count))
+        let fatigue = min(max(avgDwell / 160.0, 0.05), 1.0)
+        
+        let state = PsychometricCognitiveState(
+            shannonEntropyBits: roundedEntropy,
+            cognitiveLoadLevel: loadLevel,
+            stressAggressionIndex: Double(round(stress * 100) / 100),
+            rhythmicConfidencePct: Double(round(confidence)),
+            hesitationDoubtScore: Double(round(hesitationRatio * 100) / 100),
+            motorFatigueIndex: Double(round(fatigue * 100) / 100)
+        )
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.onPsychometricUpdate?(state)
+        }
     }
     
     private func classifyFlowState(wpm: Double) -> FlowState {

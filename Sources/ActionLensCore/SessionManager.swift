@@ -64,6 +64,14 @@ public class SessionManager: ObservableObject {
     // 45 Granular Telemetry Vectors State
     @Published public var currentSensorState: HardwareSensorState = HardwareSensorState()
     
+    // Advanced Intense Feature Vectors (Features 2, 4, 5)
+    @Published public var isHeatmapEnabled: Bool = false
+    @Published public var isDigitalTwinEnabled: Bool = false
+    @Published public var phoneTwinImage: NSImage? = nil
+    @Published public var psychometricState: PsychometricCognitiveState = PsychometricCognitiveState()
+    @Published public var primaryFocusCentroid: CGPoint = CGPoint(x: 0.5, y: 0.5)
+    @Published public var deadZoneCoveragePct: Double = 76.5
+    
     // UI Navigation State
     @Published public var selectedFilter: String = "All Events"
     @Published public var searchText: String = ""
@@ -107,6 +115,12 @@ public class SessionManager: ObservableObject {
                 }
             }
         )
+        
+        self.keyEngine?.onPsychometricUpdate = { [weak self] state in
+            DispatchQueue.main.async {
+                self?.psychometricState = state
+            }
+        }
         
         // Android ADB Phone Tracker
         self.phoneTracker = PhoneTracker(
@@ -237,6 +251,7 @@ public class SessionManager: ObservableObject {
                 if clickPings.count > 40 {
                     clickPings.removeFirst()
                 }
+                updateSpatialHeatmapCentroid()
             }
             
         case .phoneTap:
@@ -254,6 +269,10 @@ public class SessionManager: ObservableObject {
                 clickPings.append(ping)
                 if clickPings.count > 40 {
                     clickPings.removeFirst()
+                }
+                updateSpatialHeatmapCentroid()
+                if isDigitalTwinEnabled {
+                    refreshDigitalTwin()
                 }
             }
             
@@ -309,6 +328,29 @@ public class SessionManager: ObservableObject {
         if !isRecording {
             keyEngine?.flushActiveBurst()
         }
+    }
+    
+    // MARK: - Advanced Feature Utilities (Digital Twin & Heatmap Centroid)
+    public func refreshDigitalTwin() {
+        guard let pt = phoneTracker, pt.isConnected else { return }
+        pt.captureLiveTwinSnapshot { [weak self] image in
+            DispatchQueue.main.async {
+                self?.phoneTwinImage = image
+            }
+        }
+    }
+    
+    public func updateSpatialHeatmapCentroid() {
+        guard !clickPings.isEmpty else { return }
+        let sumX = clickPings.reduce(0.0) { $0 + $1.normalizedX }
+        let sumY = clickPings.reduce(0.0) { $0 + $1.normalizedY }
+        let count = Double(clickPings.count)
+        primaryFocusCentroid = CGPoint(x: sumX / count, y: sumY / count)
+        
+        let dispX = clickPings.map { abs($0.normalizedX - (sumX / count)) }.reduce(0.0, +) / count
+        let dispY = clickPings.map { abs($0.normalizedY - (sumY / count)) }.reduce(0.0, +) / count
+        let coverage = min(max((dispX + dispY) * 1.8, 0.12), 0.75)
+        deadZoneCoveragePct = Double(round((1.0 - coverage) * 1000) / 10)
     }
     
     public func clearHistory() {

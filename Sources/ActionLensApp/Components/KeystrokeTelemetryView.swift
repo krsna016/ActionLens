@@ -88,6 +88,160 @@ public struct KeystrokeTelemetryView: View {
             .background(ActionLensTheme.cardBackground)
             .cornerRadius(10)
             
+            // Neuro-Cognitive Psychometric Radar Card (Shannon Entropy & Stress Pulse)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("NEURO-COGNITIVE PSYCHOMETRIC RADAR", systemImage: "brain.head.profile")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.cyanAccent)
+                    
+                    Spacer()
+                    
+                    Text(manager.psychometricState.cognitiveLoadLevel.uppercased())
+                        .font(.system(size: 9, weight: .black, design: .monospaced))
+                        .foregroundColor(
+                            manager.psychometricState.cognitiveLoadLevel.contains("Friction") ? ActionLensTheme.coralAccent :
+                            (manager.psychometricState.cognitiveLoadLevel.contains("Flow") ? ActionLensTheme.mintAccent : ActionLensTheme.amberAccent)
+                        )
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2.5)
+                        .background(
+                            (manager.psychometricState.cognitiveLoadLevel.contains("Friction") ? ActionLensTheme.coralAccent :
+                            (manager.psychometricState.cognitiveLoadLevel.contains("Flow") ? ActionLensTheme.mintAccent : ActionLensTheme.amberAccent)).opacity(0.15)
+                        )
+                        .cornerRadius(4)
+                }
+                
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    // Box 1: Shannon Entropy
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("SHANNON ENTROPY")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.textSecondary)
+                            Spacer()
+                            Text(String(format: "%.2f bits", manager.psychometricState.shannonEntropyBits))
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.cyanAccent)
+                        }
+                        
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.white.opacity(0.06))
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(ActionLensTheme.cyanAccent)
+                                    .frame(width: g.size.width * min(CGFloat(manager.psychometricState.shannonEntropyBits / 2.58), 1.0))
+                            }
+                        }
+                        .frame(height: 4)
+                        
+                        Text(manager.psychometricState.shannonEntropyBits < 1.45 ? "Cohesive Muscle Flow" : (manager.psychometricState.shannonEntropyBits > 2.05 ? "Cognitive Dispersion" : "Nominal Variance"))
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    .padding(8)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(6)
+                    
+                    // Box 2: Stress / Aggression Pulse
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("STRESS / AGGRESSION")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.textSecondary)
+                            Spacer()
+                            Text("\(Int(manager.psychometricState.stressAggressionIndex * 100))%")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(manager.psychometricState.stressAggressionIndex > 0.4 ? ActionLensTheme.coralAccent : ActionLensTheme.mintAccent)
+                        }
+                        
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.white.opacity(0.06))
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(manager.psychometricState.stressAggressionIndex > 0.4 ? ActionLensTheme.coralAccent : ActionLensTheme.mintAccent)
+                                    .frame(width: g.size.width * min(CGFloat(manager.psychometricState.stressAggressionIndex), 1.0))
+                            }
+                        }
+                        .frame(height: 4)
+                        
+                        Text(manager.psychometricState.stressAggressionIndex > 0.4 ? "High Strain / Rapid Backspaces" : "Calm Controlled Cadence")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    .padding(8)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(6)
+                    
+                    // Box 3: Rhythmic Confidence
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("RHYTHMIC CONFIDENCE")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.textSecondary)
+                            Spacer()
+                            Text("\(Int(manager.psychometricState.rhythmicConfidencePct))%")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.amberAccent)
+                        }
+                        
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.white.opacity(0.06))
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(ActionLensTheme.amberAccent)
+                                    .frame(width: g.size.width * min(CGFloat(manager.psychometricState.rhythmicConfidencePct / 100.0), 1.0))
+                            }
+                        }
+                        .frame(height: 4)
+                        
+                        Text("Cadence Stability & Predictability")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    .padding(8)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(6)
+                    
+                    // Box 4: Hesitation / Doubt Score
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("HESITATION / DOUBT")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.textSecondary)
+                            Spacer()
+                            Text("\(Int(manager.psychometricState.hesitationDoubtScore * 100))%")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.purpleAccent)
+                        }
+                        
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.white.opacity(0.06))
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(ActionLensTheme.purpleAccent)
+                                    .frame(width: g.size.width * min(CGFloat(manager.psychometricState.hesitationDoubtScore), 1.0))
+                            }
+                        }
+                        .frame(height: 4)
+                        
+                        Text("Micro-Dwell & Reversal Latency")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(ActionLensTheme.textTertiary)
+                    }
+                    .padding(8)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(6)
+                }
+            }
+            .padding(14)
+            .background(ActionLensTheme.cardBackground)
+            .cornerRadius(10)
+            
             // Application Locus of Attention
             VStack(alignment: .leading, spacing: 10) {
                 Text("APPLICATION FOCUS DISTRIBUTION")

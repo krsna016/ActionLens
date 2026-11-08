@@ -121,6 +121,64 @@ public struct ClickRadarView: View {
                 .padding(.horizontal, 4)
             }
             
+            // Secondary HUD Controls: Heatmap & Digital Twin
+            HStack(spacing: 8) {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        manager.isHeatmapEnabled.toggle()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: manager.isHeatmapEnabled ? "flame.fill" : "flame")
+                        Text(manager.isHeatmapEnabled ? "Heatmap: ON" : "Heatmap: OFF")
+                    }
+                    .font(.system(size: 9, weight: manager.isHeatmapEnabled ? .bold : .medium, design: .monospaced))
+                    .foregroundColor(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent : ActionLensTheme.textSecondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(manager.isHeatmapEnabled ? ActionLensTheme.coralAccent.opacity(0.18) : Color.white.opacity(0.04))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                
+                if isPhoneCanvas {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.isDigitalTwinEnabled.toggle()
+                            if manager.isDigitalTwinEnabled {
+                                manager.refreshDigitalTwin()
+                            }
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: manager.isDigitalTwinEnabled ? "camera.viewfinder" : "iphone.viewfinder")
+                            Text(manager.isDigitalTwinEnabled ? "Digital Twin: ON" : "Digital Twin: OFF")
+                        }
+                        .font(.system(size: 9, weight: manager.isDigitalTwinEnabled ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent : ActionLensTheme.textSecondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(manager.isDigitalTwinEnabled ? ActionLensTheme.mintAccent.opacity(0.18) : Color.white.opacity(0.04))
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                if manager.isHeatmapEnabled {
+                    Spacer()
+                    Text("DEAD-ZONE: \(Int(manager.deadZoneCoveragePct))%")
+                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.coralAccent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(4)
+                } else {
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, 4)
+            
             // Screen Radar Canvas (Switches between Mac widescreen and Phone portrait mockup)
             if isPhoneCanvas {
                 phoneRadarCanvas
@@ -159,6 +217,36 @@ public struct ClickRadarView: View {
                     path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height / 2))
                 }
                 .stroke(ActionLensTheme.cyanAccent.opacity(0.12), lineWidth: 0.8)
+                
+                // Heatmap Gaussian KDE Layer (Feature 5)
+                if manager.isHeatmapEnabled {
+                    ForEach(manager.clickPings.filter { $0.deviceTarget == .mac }) { ping in
+                        let px = ping.normalizedX * geo.size.width
+                        let py = ping.normalizedY * geo.size.height
+                        RadialGradient(
+                            colors: [ActionLensTheme.coralAccent.opacity(0.55), ActionLensTheme.amberAccent.opacity(0.25), Color.clear],
+                            center: .center,
+                            startRadius: 4,
+                            endRadius: 36
+                        )
+                        .frame(width: 72, height: 72)
+                        .position(x: px, y: py)
+                        .blur(radius: 6)
+                    }
+                    
+                    // Focus Centroid Indicator
+                    let cx = manager.primaryFocusCentroid.x * geo.size.width
+                    let cy = manager.primaryFocusCentroid.y * geo.size.height
+                    ZStack {
+                        Circle()
+                            .stroke(ActionLensTheme.coralAccent, lineWidth: 1.5)
+                            .frame(width: 24, height: 24)
+                        Circle()
+                            .fill(ActionLensTheme.coralAccent)
+                            .frame(width: 6, height: 6)
+                    }
+                    .position(x: cx, y: cy)
+                }
                 
                 // Mac Click Pings
                 ForEach(manager.clickPings.filter { $0.deviceTarget == .mac }) { ping in
@@ -204,6 +292,34 @@ public struct ClickRadarView: View {
                             .stroke(ActionLensTheme.mintAccent.opacity(0.4), lineWidth: 1.5)
                     )
                     .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                
+                // Digital Twin Live Phone Screen Preview (Feature 2)
+                if manager.isDigitalTwinEnabled, let img = manager.phoneTwinImage {
+                    Image(nsImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: frameW, height: frameH)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .overlay(Color.black.opacity(0.35))
+                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                }
+                
+                // Heatmap Gaussian KDE Layer (Feature 5)
+                if manager.isHeatmapEnabled {
+                    ForEach(manager.clickPings.filter { $0.deviceTarget == .phone }) { ping in
+                        let px = offsetX + CGFloat(ping.normalizedX) * frameW
+                        let py = offsetY + CGFloat(ping.normalizedY) * frameH
+                        RadialGradient(
+                            colors: [ActionLensTheme.coralAccent.opacity(0.55), ActionLensTheme.amberAccent.opacity(0.25), Color.clear],
+                            center: .center,
+                            startRadius: 2,
+                            endRadius: 24
+                        )
+                        .frame(width: 48, height: 48)
+                        .position(x: px, y: py)
+                        .blur(radius: 4)
+                    }
+                }
                 
                 // Camera Pill Notch
                 Capsule()

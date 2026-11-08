@@ -1,4 +1,5 @@
 import Foundation
+import Cocoa
 
 public class PhoneTracker {
     public typealias ActionHandler = (ActionRecord) -> Void
@@ -927,6 +928,37 @@ public class PhoneTracker {
         // Immediately query foreground app on touch up to capture app switches without polling latency
         isScreenInteractive = true
         queryForegroundApp()
+    }
+    
+    // MARK: - Digital Twin Live Visual Capture
+    public func captureLiveTwinSnapshot(completion: @escaping (NSImage?) -> Void) {
+        guard isConnected, !phoneSerial.isEmpty else {
+            completion(nil)
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { completion(nil); return }
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: self.adbPath)
+            p.arguments = ["-s", self.phoneSerial, "exec-out", "screencap", "-p"]
+            let pipe = Pipe()
+            p.standardOutput = pipe
+            p.standardError = Pipe()
+            do {
+                try p.run()
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                p.waitUntilExit()
+                if let img = NSImage(data: data) {
+                    DispatchQueue.main.async {
+                        completion(img)
+                    }
+                    return
+                }
+            } catch {}
+            DispatchQueue.main.async {
+                completion(nil)
+            }
+        }
     }
     
     private func runAdb(_ args: [String]) -> (String, Int32) {
