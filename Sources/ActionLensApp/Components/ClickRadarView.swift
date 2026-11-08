@@ -215,19 +215,6 @@ public struct ClickRadarView: View {
                         .background(Color.black.opacity(0.5))
                         .cornerRadius(ActionLensTheme.tacticalRadius)
                 }
-                
-                // Canvas Drag Dimension Tag
-                HStack(spacing: 3) {
-                    Image(systemName: "arrow.down.right.and.arrow.up.left")
-                        .font(.system(size: 9))
-                    Text(isPhoneCanvas ? "\(Int(manager.phoneCanvasHeight))H" : "\(Int(manager.macCanvasHeight))H")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                }
-                .foregroundColor(ActionLensTheme.textTertiary)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2.5)
-                .background(Color.white.opacity(0.04))
-                .cornerRadius(3)
             }
             .padding(.horizontal, 4)
             
@@ -255,8 +242,7 @@ public struct ClickRadarView: View {
     
     // MARK: - Mac Radar Canvas
     private var macRadarCanvas: some View {
-        ZStack(alignment: .bottomTrailing) {
-            ZStack {
+        ZStack {
                 RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
                     .fill(Color.black.opacity(0.85))
                     .overlay(
@@ -359,9 +345,6 @@ public struct ClickRadarView: View {
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundColor(ActionLensTheme.textTertiary)
                 }
-            }
-            
-            cornerResizeGrip(isPhone: false)
         }
         .frame(height: manager.macCanvasHeight)
     }
@@ -372,8 +355,7 @@ public struct ClickRadarView: View {
         let scale: CGFloat = frameH / 260.0
         let frameW: CGFloat = 136.0 * scale
         
-        return ZStack(alignment: .bottomTrailing) {
-            GeometryReader { geo in
+        return GeometryReader { geo in
             let offsetX = (geo.size.width - frameW) / 2
             let offsetY = (geo.size.height - frameH) / 2
             
@@ -692,57 +674,8 @@ public struct ClickRadarView: View {
                 }
             }
         }
-        
-        cornerResizeGrip(isPhone: true)
+        .frame(height: manager.phoneCanvasHeight)
     }
-    .frame(height: manager.phoneCanvasHeight)
-}
-
-// MARK: - Corner Resize Grip
-private func cornerResizeGrip(isPhone: Bool) -> some View {
-    ZStack(alignment: .bottomTrailing) {
-        Canvas { context, size in
-            let w = size.width
-            let h = size.height
-            var p = Path()
-            
-            // 3 tactical diagonal hatch bars
-            p.move(to: CGPoint(x: w - 14, y: h - 3))
-            p.addLine(to: CGPoint(x: w - 3, y: h - 14))
-            
-            p.move(to: CGPoint(x: w - 9, y: h - 3))
-            p.addLine(to: CGPoint(x: w - 3, y: h - 9))
-            
-            p.move(to: CGPoint(x: w - 4, y: h - 3))
-            p.addLine(to: CGPoint(x: w - 3, y: h - 4))
-            
-            let strokeColor = isPhone ? ActionLensTheme.mintAccent : ActionLensTheme.cyanAccent
-            context.stroke(p, with: .color(strokeColor.opacity(0.85)), lineWidth: 1.6)
-        }
-        .frame(width: 18, height: 18)
-    }
-    .frame(width: 28, height: 28, alignment: .bottomTrailing)
-    .padding(4)
-    .contentShape(Rectangle())
-    .gesture(
-        DragGesture(minimumDistance: 1)
-            .onChanged { val in
-                if manager.radarDragBaseHeight == 0 {
-                    manager.radarDragBaseHeight = isPhone ? manager.phoneCanvasHeight : manager.macCanvasHeight
-                }
-                let newH = manager.radarDragBaseHeight + val.translation.height
-                if isPhone {
-                    manager.phoneCanvasHeight = max(180, min(560, newH))
-                } else {
-                    manager.macCanvasHeight = max(140, min(480, newH))
-                }
-            }
-            .onEnded { _ in
-                manager.radarDragBaseHeight = 0
-            }
-    )
-    .help("Drag corner to resize radar canvas")
-}
     
     // MARK: - Recent Interceptions List
     private var recentInterceptionsList: some View {

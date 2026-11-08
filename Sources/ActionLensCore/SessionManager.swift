@@ -80,14 +80,13 @@ public class SessionManager: ObservableObject {
     private var scrcpyProcess: Process? = nil
     @Published public var phoneTwinImage: NSImage? = nil
     @Published public var twinFrameId: UUID = UUID()
-    @Published public var phoneCanvasHeight: CGFloat = 280.0 {
+    @Published public var phoneCanvasHeight: CGFloat = 350.0 {
         didSet {
             phoneScreenScale = Double(phoneCanvasHeight / 260.0)
         }
     }
-    @Published public var macCanvasHeight: CGFloat = 210.0
-    @Published public var phoneScreenScale: Double = 1.08 // Continuous dynamic scale from corner drag
-    public var radarDragBaseHeight: CGFloat = 0
+    @Published public var macCanvasHeight: CGFloat = 260.0
+    @Published public var phoneScreenScale: Double = 1.346 // Generous large default screen scale
     @Published public var psychometricState: PsychometricCognitiveState = PsychometricCognitiveState()
     @Published public var primaryFocusCentroid: CGPoint = CGPoint(x: 0.5, y: 0.5)
     @Published public var deadZoneCoveragePct: Double = 76.5
@@ -374,7 +373,7 @@ public class SessionManager: ObservableObject {
             records.removeFirst(100)
         }
         
-        updateSessionStory()
+        scheduleDebouncedStoryUpdate()
         
         // Ingest into Autonomous User Cognitive Twin Engine (Part 2)
         let bioArc = record.swipeMetadata?.biometrics.curvatureArcDeg ?? 14.2
@@ -402,20 +401,39 @@ public class SessionManager: ObservableObject {
         }
     }
     
+    private var storyUpdateWorkItem: DispatchWorkItem? = nil
+    
+    public func scheduleDebouncedStoryUpdate() {
+        storyUpdateWorkItem?.cancel()
+        let recordsSnapshot = self.records
+        let appCountsSnapshot = self.appCounts
+        let wpmSnapshot = self.currentWPM
+        let startSnapshot = self.sessionStartTime
+        
+        let work = DispatchWorkItem { [weak self] in
+            let elapsed = max(Date().timeIntervalSince(startSnapshot) / 60.0, 0.1)
+            let bursts = recordsSnapshot.compactMap { $0.burstMetadata }
+            let totalBurstChars = bursts.reduce(0) { $0 + $1.charCount }
+            let totalBurstTimeMin = bursts.reduce(0.0) { $0 + $1.durationSeconds } / 60.0
+            let avgWPM = totalBurstTimeMin > 0 ? (Double(totalBurstChars) / 5.0) / totalBurstTimeMin : wpmSnapshot
+            
+            let story = NarrativeEngine.shared.composeSessionNarrative(
+                records: recordsSnapshot,
+                elapsedMinutes: elapsed,
+                appCounts: appCountsSnapshot,
+                avgWPM: avgWPM
+            )
+            
+            DispatchQueue.main.async {
+                self?.sessionStory = story
+            }
+        }
+        storyUpdateWorkItem = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.75, execute: work)
+    }
+    
     public func updateSessionStory() {
-        let elapsed = max(Date().timeIntervalSince(sessionStartTime) / 60.0, 0.1)
-        
-        let bursts = records.compactMap { $0.burstMetadata }
-        let totalBurstChars = bursts.reduce(0) { $0 + $1.charCount }
-        let totalBurstTimeMin = bursts.reduce(0.0) { $0 + $1.durationSeconds } / 60.0
-        let avgWPM = totalBurstTimeMin > 0 ? (Double(totalBurstChars) / 5.0) / totalBurstTimeMin : currentWPM
-        
-        self.sessionStory = NarrativeEngine.shared.composeSessionNarrative(
-            records: records,
-            elapsedMinutes: elapsed,
-            appCounts: appCounts,
-            avgWPM: avgWPM
-        )
+        scheduleDebouncedStoryUpdate()
     }
     
     public func toggleRecording() {

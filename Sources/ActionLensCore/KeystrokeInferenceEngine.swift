@@ -11,13 +11,20 @@ public class KeystrokeInferenceEngine {
     private let onWPMUpdate: WPMUpdateHandler
     public var onPsychometricUpdate: PsychometricUpdateHandler?
     
-    // Typing burst accumulator
+    // Dedicated low-latency serial queue for all keystroke math, entropy, and burst heuristics
+    private let processingQueue = DispatchQueue(label: "com.actionlens.keystroke-engine", qos: .userInteractive)
+    
+    // Cached frontmost application to avoid blocking IPC calls to WindowServer on key events
+    private var cachedAppName: String = "Desktop"
+    private var appObserver: Any?
+    
+    // Typing burst accumulator (accessed strictly on processingQueue)
     private var burstCharCount: Int = 0
     private var burstStartTime: Date?
     private var lastKeyTime: Date?
     private var activeBurstApp: String = ""
     private var backspaceCount: Int = 0
-    private var flushTimer: Timer?
+    private var burstFlushWorkItem: DispatchWorkItem?
     private var isRunning: Bool = false
     
     // Micro-biometric timing telemetry (Signals 1 - 2)
@@ -26,6 +33,10 @@ public class KeystrokeInferenceEngine {
     private var dwellTimes: [Double] = []
     private var flightTimes: [Double] = []
     private var recentFlightTimes: [Double] = []
+    
+    // Throttled UI dispatch timestamps to eliminate main-thread RunLoop contention
+    private var lastWpmDispatchTime: Date = Date.distantPast
+    private var lastPsychometricDispatchTime: Date = Date.distantPast
     
     public init(
         onAction: @escaping ActionHandler,
@@ -39,20 +50,39 @@ public class KeystrokeInferenceEngine {
         guard !isRunning else { return }
         isRunning = true
         
-        let mask: NSEvent.EventTypeMask = [.keyDown, .keyUp]
-        
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
-            self?.handleKeyEvent(event)
+        // Initialize and observe frontmost app without blocking key events
+        cachedAppName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Desktop"
+        appObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] note in
+            if let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
+                self?.cachedAppName = app.localizedName ?? "Desktop"
+            }
         }
         
+        let mask: NSEvent.EventTypeMask = [.keyDown, .keyUp]
+        
+        // Global monitor (events targeting external windows)
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
+            self?.enqueueEvent(event)
+        }
+        
+        // Local monitor (events targeting ActionLens itself) - returns immediately with 0 latency
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
-            self?.handleKeyEvent(event)
+            self?.enqueueEvent(event)
             return event
         }
     }
     
     public func stop() {
-        flushActiveBurst()
+        processingQueue.sync { [weak self] in
+            self?.flushActiveBurst()
+            self?.burstFlushWorkItem?.cancel()
+            self?.burstFlushWorkItem = nil
+        }
+        
         if let g = globalMonitor {
             NSEvent.removeMonitor(g)
             globalMonitor = nil
@@ -61,22 +91,53 @@ public class KeystrokeInferenceEngine {
             NSEvent.removeMonitor(l)
             localMonitor = nil
         }
-        flushTimer?.invalidate()
-        flushTimer = nil
+        if let obs = appObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+            appObserver = nil
+        }
         isRunning = false
     }
     
-    private func handleKeyEvent(_ event: NSEvent) {
+    // Extract immutable primitives immediately so the event monitor can return without waiting
+    private func enqueueEvent(_ event: NSEvent) {
+        let type = event.type
+        let keyCode = event.keyCode
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let chars = event.charactersIgnoringModifiers
+        let app = self.cachedAppName
         let now = Date()
         
+        processingQueue.async { [weak self] in
+            self?.processKeyEvent(
+                type: type,
+                keyCode: keyCode,
+                flags: flags,
+                chars: chars,
+                appName: app,
+                timestamp: now
+            )
+        }
+    }
+    
+    private func processKeyEvent(
+        type: NSEvent.EventType,
+        keyCode: UInt16,
+        flags: NSEvent.ModifierFlags,
+        chars: String?,
+        appName: String,
+        timestamp: Date
+    ) {
+        let now = timestamp
+        let windowTitle = appName
+        
         // Handle keyUp for dwell time calculation
-        if event.type == .keyUp {
-            if let downTime = keyDownTimestamps[event.keyCode] {
+        if type == .keyUp {
+            if let downTime = keyDownTimestamps[keyCode] {
                 let dwell = max(now.timeIntervalSince(downTime) * 1000.0, 5.0)
                 if dwell < 800.0 {
                     dwellTimes.append(dwell)
                 }
-                keyDownTimestamps.removeValue(forKey: event.keyCode)
+                keyDownTimestamps.removeValue(forKey: keyCode)
             }
             lastKeyUpTime = now
             return
@@ -91,23 +152,20 @@ public class KeystrokeInferenceEngine {
                 if recentFlightTimes.count > 35 {
                     recentFlightTimes.removeFirst()
                 }
-                computePsychometricEntropy()
+                computePsychometricEntropy(timestamp: now)
             }
         }
-        keyDownTimestamps[event.keyCode] = now
+        keyDownTimestamps[keyCode] = now
         
-        let frontApp = NSWorkspace.shared.frontmostApplication
-        let appName = frontApp?.localizedName ?? "Desktop"
-        let windowTitle = appName
-        
-        // Reset idle timer
-        flushTimer?.invalidate()
-        flushTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] _ in
+        // Reset idle burst timer asynchronously on processingQueue
+        burstFlushWorkItem?.cancel()
+        let flushItem = DispatchWorkItem { [weak self] in
             self?.flushActiveBurst()
         }
+        burstFlushWorkItem = flushItem
+        processingQueue.asyncAfter(deadline: .now() + 1.25, execute: flushItem)
         
         // 1. Check for Command / Control / Option Hotkeys
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let isCmd = flags.contains(.command)
         let isCtrl = flags.contains(.control)
         let isOpt = flags.contains(.option)
@@ -115,7 +173,7 @@ public class KeystrokeInferenceEngine {
         
         if isCmd || (isCtrl && !isOpt && !isShift) {
             flushActiveBurst()
-            let combo = formatKeyCombo(event: event, isCmd: isCmd, isCtrl: isCtrl, isOpt: isOpt, isShift: isShift)
+            let combo = formatKeyCombo(keyCode: keyCode, chars: chars, isCmd: isCmd, isCtrl: isCtrl, isOpt: isOpt, isShift: isShift)
             let narrative = NarrativeEngine.shared.narrateShortcut(combo: combo, appName: appName)
             
             let record = ActionRecord(
@@ -133,12 +191,11 @@ public class KeystrokeInferenceEngine {
         }
         
         // 2. Check for Backspace / Delete
-        if event.keyCode == 51 || event.keyCode == 117 { // 51 is Backspace, 117 is Delete
+        if keyCode == 51 || keyCode == 117 { // 51 = Backspace, 117 = Delete
             backspaceCount += 1
             if burstCharCount > 0 {
                 burstCharCount = max(burstCharCount - 1, 0)
             }
-            // If user repeatedly hits Backspace, we bundle them
             if backspaceCount >= 4 {
                 let narrative = NarrativeEngine.shared.narrateDeletion(count: backspaceCount, appName: appName)
                 let record = ActionRecord(
@@ -174,14 +231,14 @@ public class KeystrokeInferenceEngine {
         }
         
         // 3. Check for Return / Enter key
-        if event.keyCode == 36 || event.keyCode == 76 { // 36 is Return, 76 is Enter
+        if keyCode == 36 || keyCode == 76 { // 36 = Return, 76 = Enter
             burstCharCount += 1
             flushActiveBurst(terminator: "Return")
             return
         }
         
-        // 4. Check for Escape or Tab
-        if event.keyCode == 53 { // Escape
+        // 4. Check for Escape key
+        if keyCode == 53 { // Escape
             flushActiveBurst()
             let record = ActionRecord(
                 timestamp: now,
@@ -207,12 +264,19 @@ public class KeystrokeInferenceEngine {
         burstCharCount += 1
         lastKeyTime = now
         
-        // Compute instantaneous WPM
+        // Compute instantaneous WPM with 10Hz throttle to prevent main-thread saturation
         if let start = burstStartTime {
             let durationMin = max(now.timeIntervalSince(start) / 60.0, 0.005)
             let currentWPM = (Double(burstCharCount) / 5.0) / durationMin
             let state = classifyFlowState(wpm: currentWPM)
-            onWPMUpdate(min(currentWPM, 180.0), state)
+            
+            if now.timeIntervalSince(lastWpmDispatchTime) >= 0.1 {
+                lastWpmDispatchTime = now
+                let boundedWPM = min(currentWPM, 180.0)
+                DispatchQueue.main.async { [weak self] in
+                    self?.onWPMUpdate(boundedWPM, state)
+                }
+            }
         }
     }
     
@@ -253,16 +317,14 @@ public class KeystrokeInferenceEngine {
             neuroMotorRhythm: rhythm
         )
         
-        // Update live hardware state via dedicated thread-safe mutator
-        HardwareSensorTelemetry.shared.updateKeystrokeDynamics(biometrics)
-        
+        let category = inferCategory(count: burstCharCount, app: app)
         let meta = KeystrokeBurstMetadata(
             charCount: burstCharCount,
             wpm: wpm,
             durationSeconds: durationSec,
             flowState: flow,
             terminatorKey: terminator,
-            inferredCategory: inferCategory(count: burstCharCount, app: app),
+            inferredCategory: category,
             biometrics: biometrics
         )
         
@@ -280,7 +342,10 @@ public class KeystrokeInferenceEngine {
         )
         
         onAction(record)
-        onWPMUpdate(0.0, .idle)
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.onWPMUpdate(0.0, .idle)
+        }
         
         // Reset state
         burstCharCount = 0
@@ -292,8 +357,13 @@ public class KeystrokeInferenceEngine {
     }
     
     // MARK: - Neuro-Cognitive Psychometric Shannon Entropy
-    private func computePsychometricEntropy() {
+    private func computePsychometricEntropy(timestamp: Date) {
         guard recentFlightTimes.count >= 5 else { return }
+        
+        // Throttle psychometric entropy dispatch to ~6.6Hz (every 150ms)
+        guard timestamp.timeIntervalSince(lastPsychometricDispatchTime) >= 0.15 else { return }
+        lastPsychometricDispatchTime = timestamp
+        
         let n = Double(recentFlightTimes.count)
         
         // 6 Discrete Shannon Entropy Bins
@@ -377,21 +447,21 @@ public class KeystrokeInferenceEngine {
         }
     }
     
-    private func formatKeyCombo(event: NSEvent, isCmd: Bool, isCtrl: Bool, isOpt: Bool, isShift: Bool) -> String {
+    private func formatKeyCombo(keyCode: UInt16, chars: String?, isCmd: Bool, isCtrl: Bool, isOpt: Bool, isShift: Bool) -> String {
         var parts: [String] = []
         if isCtrl { parts.append("Ctrl") }
         if isOpt { parts.append("Opt") }
         if isShift { parts.append("Shift") }
         if isCmd { parts.append("Cmd") }
         
-        let keyChar = event.charactersIgnoringModifiers?.uppercased() ?? ""
+        let keyChar = chars?.uppercased() ?? ""
         if !keyChar.isEmpty && keyChar != " " {
             parts.append(keyChar)
-        } else if event.keyCode == 49 {
+        } else if keyCode == 49 {
             parts.append("Space")
-        } else if event.keyCode == 36 {
+        } else if keyCode == 36 {
             parts.append("Return")
-        } else if event.keyCode == 48 {
+        } else if keyCode == 48 {
             parts.append("Tab")
         }
         
