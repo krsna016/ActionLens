@@ -13,18 +13,43 @@ public struct KeystrokeTelemetryView: View {
             // Header
             HStack {
                 Label("KEYSTROKE INFERENCE & TELEMETRY", systemImage: "speedometer")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
                     .foregroundColor(ActionLensTheme.amberAccent)
                 
                 Spacer()
                 
-                Text(manager.currentFlowState.rawValue)
-                    .font(.system(size: 11, weight: .bold))
+                // Flush Screen Clutter (Preserves Database)
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        manager.clearScreenCanvasOverlays()
+                    }
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "eraser.line.dashed")
+                            .font(.system(size: 8))
+                        Text("FLUSH HUD")
+                    }
+                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.amberAccent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2.5)
+                    .background(ActionLensTheme.amberAccent.opacity(0.15))
+                    .cornerRadius(ActionLensTheme.tacticalRadius)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                            .stroke(ActionLensTheme.amberAccent.opacity(0.5), lineWidth: 0.8)
+                    )
+                }
+                .buttonStyle(.plain)
+                .help("Flush on-screen HUD clutter without deleting recorded vectors")
+                
+                Text(manager.currentFlowState.rawValue.uppercased())
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                     .foregroundColor(Color(hex: manager.currentFlowState.badgeColorHex))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2.5)
                     .background(Color(hex: manager.currentFlowState.badgeColorHex).opacity(0.15))
-                    .cornerRadius(6)
+                    .cornerRadius(ActionLensTheme.tacticalRadius)
             }
             .padding(.horizontal, 4)
             
@@ -84,9 +109,13 @@ public struct KeystrokeTelemetryView: View {
                     .foregroundColor(ActionLensTheme.textTertiary)
                 }
             }
-            .padding(14)
+            .padding(12)
             .background(ActionLensTheme.cardBackground)
-            .cornerRadius(10)
+            .cornerRadius(ActionLensTheme.tacticalRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(ActionLensTheme.border, lineWidth: 0.8)
+            )
             
             // Phone Touchscreen Keyboard Micro-Biometrics Card (Signals 1 - 4)
             VStack(alignment: .leading, spacing: 10) {
@@ -157,9 +186,13 @@ public struct KeystrokeTelemetryView: View {
                     .cornerRadius(6)
                 }
             }
-            .padding(14)
+            .padding(12)
             .background(ActionLensTheme.cardBackground)
-            .cornerRadius(10)
+            .cornerRadius(ActionLensTheme.tacticalRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(ActionLensTheme.border, lineWidth: 0.8)
+            )
             
             // Neuro-Cognitive Psychometric Radar Card (Shannon Entropy & Stress Pulse)
             VStack(alignment: .leading, spacing: 12) {
@@ -311,9 +344,13 @@ public struct KeystrokeTelemetryView: View {
                     .cornerRadius(6)
                 }
             }
-            .padding(14)
+            .padding(12)
             .background(ActionLensTheme.cardBackground)
-            .cornerRadius(10)
+            .cornerRadius(ActionLensTheme.tacticalRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(ActionLensTheme.border, lineWidth: 0.8)
+            )
             
             // Application Locus of Attention
             VStack(alignment: .leading, spacing: 10) {
@@ -354,16 +391,20 @@ public struct KeystrokeTelemetryView: View {
                     }
                 }
             }
-            .padding(14)
+            .padding(12)
             .background(ActionLensTheme.cardBackground)
-            .cornerRadius(10)
+            .cornerRadius(ActionLensTheme.tacticalRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(ActionLensTheme.border, lineWidth: 0.8)
+            )
         }
-        .padding(16)
+        .padding(14)
         .background(ActionLensTheme.panelBackground)
-        .cornerRadius(12)
+        .cornerRadius(ActionLensTheme.tacticalRadius)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(ActionLensTheme.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                .stroke(ActionLensTheme.border, lineWidth: 0.8)
         )
     }
 }

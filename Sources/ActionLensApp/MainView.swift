@@ -40,16 +40,24 @@ public struct MainView: View {
                         // Right Pane: Telemetry / Radar / Storybook
                         VStack(spacing: 12) {
                             // Tab Selector
-                            HStack(spacing: 8) {
+                            HStack(spacing: 6) {
                                 ForEach(tabs, id: \.self) { tab in
-                                    Button(action: { manager.rightTab = tab }) {
-                                        Label(tab, systemImage: iconForTab(tab))
-                                            .font(.system(size: 11, weight: manager.rightTab == tab ? .bold : .medium))
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.15)) {
+                                            manager.rightTab = tab
+                                        }
+                                    }) {
+                                        Label(tab.uppercased(), systemImage: iconForTab(tab))
+                                            .font(.system(size: 9.5, weight: manager.rightTab == tab ? .black : .bold, design: .monospaced))
                                             .foregroundColor(manager.rightTab == tab ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 6)
-                                            .background(manager.rightTab == tab ? ActionLensTheme.cyanAccent.opacity(0.15) : Color.clear)
-                                            .cornerRadius(6)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 5)
+                                            .background(manager.rightTab == tab ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
+                                            .cornerRadius(ActionLensTheme.tacticalRadius)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                                    .stroke(manager.rightTab == tab ? ActionLensTheme.cyanAccent.opacity(0.7) : ActionLensTheme.border, lineWidth: 0.8)
+                                            )
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -94,18 +102,19 @@ public struct MainView: View {
     
     // Top Header Bar
     private var headerBar: some View {
-        HStack(spacing: 16) {
-            // Branding & Live Indicator
+        HStack(spacing: 14) {
+            // Branding & C4ISR Military Status
             HStack(spacing: 8) {
                 Circle()
                     .fill(manager.isRecording ? ActionLensTheme.mintAccent : ActionLensTheme.coralAccent)
-                    .frame(width: 10, height: 10)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: manager.isRecording ? ActionLensTheme.mintAccent.opacity(0.8) : ActionLensTheme.coralAccent.opacity(0.8), radius: 4)
                 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("ACTIONLENS")
-                        .font(.system(size: 13, weight: .black, design: .monospaced))
+                    Text("ACTIONLENS // C4ISR")
+                        .font(.system(size: 12.5, weight: .black, design: .monospaced))
                         .foregroundColor(ActionLensTheme.textPrimary)
-                    Text(manager.isRecording ? "CROSS-PLATFORM INTERACTION TELEMETRY" : "TELEMETRY PAUSED")
+                    Text(manager.isRecording ? "● REC: LIVE [52-VEC TELEMETRY]" : "■ HOLD: TELEMETRY PAUSED")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
                         .foregroundColor(manager.isRecording ? ActionLensTheme.mintAccent : ActionLensTheme.coralAccent)
                 }
@@ -113,90 +122,153 @@ public struct MainView: View {
             
             Spacer()
             
-            // KPI Quick Badges
-            HStack(spacing: 10) {
-                kpiBadge(title: "MAC CLICKS", value: "\(manager.totalClicks)", icon: "cursorarrow.click.2", color: ActionLensTheme.cyanAccent)
-                kpiBadge(title: "PHONE TAPS", value: "\(manager.totalPhoneTaps)", icon: "hand.tap.fill", color: ActionLensTheme.mintAccent)
-                kpiBadge(title: "SWIPES", value: "\(manager.totalPhoneSwipes)", icon: "hand.draw.fill", color: ActionLensTheme.amberAccent)
-                kpiBadge(title: "KEYSTROKES", value: "\(manager.totalKeystrokes)", icon: "keyboard", color: ActionLensTheme.coralAccent)
+            // Military KPI Instrumentation Gauges
+            HStack(spacing: 8) {
+                kpiBadge(title: "MAC CLK", value: String(format: "%03d", manager.totalClicks), icon: "cursorarrow.click.2", color: ActionLensTheme.cyanAccent)
+                kpiBadge(title: "PHN TAP", value: String(format: "%03d", manager.totalPhoneTaps), icon: "hand.tap.fill", color: ActionLensTheme.mintAccent)
+                kpiBadge(title: "SWP VEC", value: String(format: "%03d", manager.totalPhoneSwipes), icon: "hand.draw.fill", color: ActionLensTheme.amberAccent)
+                kpiBadge(title: "KEY EVT", value: String(format: "%03d", manager.totalKeystrokes), icon: "keyboard", color: ActionLensTheme.coralAccent)
                 
                 // Frontmost Focus
                 HStack(spacing: 6) {
                     Image(systemName: "macwindow")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundColor(ActionLensTheme.purpleAccent)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("ACTIVE FOCUS")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textTertiary)
-                        Text(manager.currentApp)
-                            .font(.system(size: 11, weight: .bold))
+                        Text(manager.currentApp.isEmpty ? "SYSTEM" : manager.currentApp)
+                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                             .foregroundColor(ActionLensTheme.textPrimary)
                             .lineLimit(1)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
                 .background(ActionLensTheme.cardBackground)
-                .cornerRadius(6)
+                .cornerRadius(ActionLensTheme.tacticalRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                        .stroke(ActionLensTheme.border, lineWidth: 0.8)
+                )
             }
             
             Spacer()
             
-            // Action Buttons
-            HStack(spacing: 8) {
+            // Tactical Action Controls
+            HStack(spacing: 6) {
+                // Pause / Stream Switch
                 Button(action: { manager.toggleRecording() }) {
-                    Image(systemName: manager.isRecording ? "pause.fill" : "play.fill")
-                        .foregroundColor(ActionLensTheme.textPrimary)
-                        .padding(7)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(Circle())
+                    HStack(spacing: 4) {
+                        Image(systemName: manager.isRecording ? "pause.fill" : "play.fill")
+                            .font(.system(size: 8.5))
+                        Text(manager.isRecording ? "PAUSE" : "RESUME")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundColor(manager.isRecording ? ActionLensTheme.cyanAccent : ActionLensTheme.mintAccent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.4))
+                    .cornerRadius(ActionLensTheme.tacticalRadius)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                            .stroke(manager.isRecording ? ActionLensTheme.cyanAccent.opacity(0.5) : ActionLensTheme.mintAccent.opacity(0.5), lineWidth: 0.8)
+                    )
                 }
                 .buttonStyle(.plain)
                 .help(manager.isRecording ? "Pause Telemetry Stream" : "Resume Telemetry Stream")
                 
-                Button(action: { manager.clearHistory() }) {
-                    Image(systemName: "trash")
-                        .foregroundColor(ActionLensTheme.textSecondary)
-                        .padding(7)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(Circle())
+                // FLUSH SCREEN CANVAS (Preserves all database vectors)
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        manager.clearScreenCanvasOverlays()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "eraser.line.dashed")
+                            .font(.system(size: 8.5))
+                        Text("FLUSH CANVAS")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundColor(ActionLensTheme.amberAccent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(ActionLensTheme.amberAccent.opacity(0.12))
+                    .cornerRadius(ActionLensTheme.tacticalRadius)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                            .stroke(ActionLensTheme.amberAccent.opacity(0.6), lineWidth: 0.8)
+                    )
                 }
                 .buttonStyle(.plain)
-                .help("Clear Chronicle")
+                .help("Flush on-screen radar clutter & keystroke trails without deleting recorded telemetry vectors")
                 
+                // PURGE DATABASE (Full Wipe)
+                Button(action: { manager.clearHistory() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 8.5))
+                        Text("PURGE DB")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundColor(ActionLensTheme.coralAccent.opacity(0.85))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(ActionLensTheme.coralAccent.opacity(0.10))
+                    .cornerRadius(ActionLensTheme.tacticalRadius)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                            .stroke(ActionLensTheme.coralAccent.opacity(0.4), lineWidth: 0.8)
+                    )
+                }
+                .buttonStyle(.plain)
+                .help("Purge complete chronicle and vector database")
+                
+                // Mini HUD Shrink
                 Button(action: {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         manager.isMiniHUD = true
                     }
                 }) {
                     Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .font(.system(size: 9))
                         .foregroundColor(ActionLensTheme.cyanAccent)
-                        .padding(7)
+                        .padding(5)
                         .background(ActionLensTheme.cyanAccent.opacity(0.15))
-                        .clipShape(Circle())
+                        .cornerRadius(ActionLensTheme.tacticalRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                .stroke(ActionLensTheme.cyanAccent.opacity(0.4), lineWidth: 0.8)
+                        )
                 }
                 .buttonStyle(.plain)
                 .help("Shrink to Floating Mini HUD")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(ActionLensTheme.panelBackground)
+        .overlay(
+            Rectangle()
+                .frame(height: 0.8)
+                .foregroundColor(ActionLensTheme.border),
+            alignment: .bottom
+        )
     }
     
     // Multi-Device Switcher Bar
     private var deviceSwitcherBar: some View {
         HStack(spacing: 12) {
             Text("DEVICE TARGET:")
-                .font(.system(size: 10, weight: .black, design: .monospaced))
+                .font(.system(size: 9.5, weight: .black, design: .monospaced))
                 .foregroundColor(ActionLensTheme.textTertiary)
             
-            // Segmented Switcher
+            // Segmented Tactical Switcher
             HStack(spacing: 4) {
-                deviceButton(title: "Unified Dual", mode: "Unified", icon: "sparkles")
-                deviceButton(title: "Mac Display", mode: "Mac", icon: "laptopcomputer")
-                deviceButton(title: "Phone (\(manager.phoneModel))", mode: "Phone", icon: "iphone")
+                deviceButton(title: "UNIFIED DUAL", mode: "Unified", icon: "sparkles")
+                deviceButton(title: "MAC DISPLAY", mode: "Mac", icon: "laptopcomputer")
+                deviceButton(title: "PHONE (\(manager.phoneModel))", mode: "Phone", icon: "iphone")
             }
             
             Spacer()
@@ -205,42 +277,46 @@ public struct MainView: View {
             HStack(spacing: 6) {
                 Circle()
                     .fill(manager.isPhoneConnected ? ActionLensTheme.mintAccent : ActionLensTheme.amberAccent)
-                    .frame(width: 7, height: 7)
-                Text(manager.isPhoneConnected ? "ADB: \(manager.phoneStatusDescription)" : "ADB: Disconnected")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .frame(width: 6, height: 6)
+                Text(manager.isPhoneConnected ? "ADB LINK: \(manager.phoneStatusDescription) | 120Hz KINETICS" : "ADB: OFFLINE / DISCONNECTED")
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                     .foregroundColor(manager.isPhoneConnected ? ActionLensTheme.mintAccent : ActionLensTheme.amberAccent)
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.black.opacity(0.4))
-            .cornerRadius(5)
+            .padding(.vertical, 3.5)
+            .background(Color.black.opacity(0.5))
+            .cornerRadius(ActionLensTheme.tacticalRadius)
+            .overlay(
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(manager.isPhoneConnected ? ActionLensTheme.mintAccent.opacity(0.3) : ActionLensTheme.amberAccent.opacity(0.3), lineWidth: 0.8)
+            )
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
         .background(ActionLensTheme.background.opacity(0.95))
     }
     
     private func deviceButton(title: String, mode: String, icon: String) -> some View {
         let isSelected = manager.activeDeviceView == mode
         return Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withAnimation(.easeInOut(duration: 0.15)) {
                 manager.activeDeviceView = mode
             }
         }) {
             HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9.5))
                 Text(title)
-                    .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                    .font(.system(size: 9.5, weight: isSelected ? .black : .bold, design: .monospaced))
             }
-            .foregroundColor(isSelected ? ActionLensTheme.textPrimary : ActionLensTheme.textSecondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
-            .background(isSelected ? ActionLensTheme.cyanAccent.opacity(0.25) : Color.white.opacity(0.05))
-            .cornerRadius(6)
+            .foregroundColor(isSelected ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(isSelected ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
+            .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? ActionLensTheme.cyanAccent.opacity(0.8) : Color.clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(isSelected ? ActionLensTheme.cyanAccent.opacity(0.7) : ActionLensTheme.border, lineWidth: 0.8)
             )
         }
         .buttonStyle(.plain)
@@ -249,20 +325,24 @@ public struct MainView: View {
     private func kpiBadge(title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 11))
+                .font(.system(size: 10))
                 .foregroundColor(color)
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textTertiary)
                 Text(value)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10.5, weight: .black, design: .monospaced))
                     .foregroundColor(ActionLensTheme.textPrimary)
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.vertical, 4)
         .background(ActionLensTheme.cardBackground)
-        .cornerRadius(6)
+        .cornerRadius(ActionLensTheme.tacticalRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                .stroke(ActionLensTheme.border, lineWidth: 0.8)
+        )
     }
 }

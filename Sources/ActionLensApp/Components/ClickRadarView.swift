@@ -227,6 +227,55 @@ public struct ClickRadarView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    
+                    // Flush Radar Canvas Clutter (Retains Telemetry Database)
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.clearScreenCanvasOverlays()
+                        }
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "eraser.line.dashed")
+                                .font(.system(size: 8))
+                            Text("FLUSH")
+                        }
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.amberAccent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(ActionLensTheme.amberAccent.opacity(0.15))
+                        .cornerRadius(ActionLensTheme.tacticalRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                .stroke(ActionLensTheme.amberAccent.opacity(0.5), lineWidth: 0.8)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Flush on-screen radar pings and clutter (preserves telemetry database)")
+                } else {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            manager.clearScreenCanvasOverlays()
+                        }
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "eraser.line.dashed")
+                                .font(.system(size: 8))
+                            Text("FLUSH RADAR")
+                        }
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.amberAccent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(ActionLensTheme.amberAccent.opacity(0.15))
+                        .cornerRadius(ActionLensTheme.tacticalRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                .stroke(ActionLensTheme.amberAccent.opacity(0.5), lineWidth: 0.8)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Flush on-screen radar pings and clutter (preserves telemetry database)")
                 }
                 
                 if manager.isHeatmapEnabled {
@@ -257,23 +306,23 @@ public struct ClickRadarView: View {
             // Dual-Device Keystrokes HUD (Mac Cadence + Phone Micro-Biometrics)
             dualDeviceKeystrokeHud
         }
-        .padding(16)
+        .padding(14)
         .background(ActionLensTheme.panelBackground)
-        .cornerRadius(12)
+        .cornerRadius(ActionLensTheme.tacticalRadius)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(ActionLensTheme.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                .stroke(ActionLensTheme.border, lineWidth: 0.8)
         )
     }
     
     // MARK: - Mac Radar Canvas
     private var macRadarCanvas: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.75))
+            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                .fill(Color.black.opacity(0.85))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(ActionLensTheme.border, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                        .stroke(ActionLensTheme.border, lineWidth: 0.8)
                 )
             
             GeometryReader { geo in
@@ -386,6 +435,50 @@ public struct ClickRadarView: View {
             let offsetY = (geo.size.height - frameH) / 2
             
             ZStack {
+                // Military Tactical Coordinate Reticles
+                Path { p in
+                    p.move(to: CGPoint(x: offsetX, y: geo.size.height / 2))
+                    p.addLine(to: CGPoint(x: offsetX + frameW, y: geo.size.height / 2))
+                    p.move(to: CGPoint(x: geo.size.width / 2, y: offsetY))
+                    p.addLine(to: CGPoint(x: geo.size.width / 2, y: offsetY + frameH))
+                }
+                .stroke(ActionLensTheme.cyanAccent.opacity(0.18), style: StrokeStyle(lineWidth: 0.8, dash: [4, 4]))
+                
+                // Military Corner Crosshairs
+                Group {
+                    // Top Left Bracket
+                    Path { p in
+                        p.move(to: CGPoint(x: offsetX - 5, y: offsetY + 10))
+                        p.addLine(to: CGPoint(x: offsetX - 5, y: offsetY - 5))
+                        p.addLine(to: CGPoint(x: offsetX + 10, y: offsetY - 5))
+                    }
+                    .stroke(ActionLensTheme.mintAccent.opacity(0.8), lineWidth: 1.5)
+                    
+                    // Top Right Bracket
+                    Path { p in
+                        p.move(to: CGPoint(x: offsetX + frameW - 10, y: offsetY - 5))
+                        p.addLine(to: CGPoint(x: offsetX + frameW + 5, y: offsetY - 5))
+                        p.addLine(to: CGPoint(x: offsetX + frameW + 5, y: offsetY + 10))
+                    }
+                    .stroke(ActionLensTheme.mintAccent.opacity(0.8), lineWidth: 1.5)
+                    
+                    // Bottom Left Bracket
+                    Path { p in
+                        p.move(to: CGPoint(x: offsetX - 5, y: offsetY + frameH - 10))
+                        p.addLine(to: CGPoint(x: offsetX - 5, y: offsetY + frameH + 5))
+                        p.addLine(to: CGPoint(x: offsetX + 10, y: offsetY + frameH + 5))
+                    }
+                    .stroke(ActionLensTheme.mintAccent.opacity(0.8), lineWidth: 1.5)
+                    
+                    // Bottom Right Bracket
+                    Path { p in
+                        p.move(to: CGPoint(x: offsetX + frameW - 10, y: offsetY + frameH + 5))
+                        p.addLine(to: CGPoint(x: offsetX + frameW + 5, y: offsetY + frameH + 5))
+                        p.addLine(to: CGPoint(x: offsetX + frameW + 5, y: offsetY + frameH - 10))
+                    }
+                    .stroke(ActionLensTheme.mintAccent.opacity(0.8), lineWidth: 1.5)
+                }
+                
                 // Phone Bezel Frame
                 RoundedRectangle(cornerRadius: 20 * scale)
                     .fill(Color.black.opacity(0.85))
@@ -761,9 +854,13 @@ public struct ClickRadarView: View {
                                 .foregroundColor(ActionLensTheme.textTertiary)
                         }
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
+                        .padding(.vertical, 4)
                         .background(ActionLensTheme.cardBackground)
-                        .cornerRadius(6)
+                        .cornerRadius(ActionLensTheme.tacticalRadius)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                                .stroke(ActionLensTheme.border, lineWidth: 0.8)
+                        )
                     }
                 }
             }
@@ -792,10 +889,10 @@ public struct ClickRadarView: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
             .background(Color.black.opacity(0.45))
-            .cornerRadius(5)
+            .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(ActionLensTheme.amberAccent.opacity(0.35), lineWidth: 0.6)
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(ActionLensTheme.amberAccent.opacity(0.35), lineWidth: 0.8)
             )
             
             Spacer()
@@ -818,10 +915,10 @@ public struct ClickRadarView: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
             .background(Color.black.opacity(0.45))
-            .cornerRadius(5)
+            .cornerRadius(ActionLensTheme.tacticalRadius)
             .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(ActionLensTheme.mintAccent.opacity(0.35), lineWidth: 0.6)
+                RoundedRectangle(cornerRadius: ActionLensTheme.tacticalRadius)
+                    .stroke(ActionLensTheme.mintAccent.opacity(0.35), lineWidth: 0.8)
             )
         }
     }

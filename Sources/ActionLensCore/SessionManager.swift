@@ -90,6 +90,7 @@ public class SessionManager: ObservableObject {
     
     // UI Navigation State
     @Published public var selectedFilter: String = "All Events"
+    @Published public var feedDisplayMode: String = "Tactical" // "Tactical" vs "Narrative"
     @Published public var searchText: String = ""
     @Published public var isMiniHUD: Bool = false
     @Published public var rightTab: String = "Click Radar"
@@ -484,6 +485,15 @@ public class SessionManager: ObservableObject {
         let dispY = clickPings.map { abs($0.normalizedY - (sumY / count)) }.reduce(0.0, +) / count
         let coverage = min(max((dispX + dispY) * 1.8, 0.12), 0.75)
         deadZoneCoveragePct = Double(round((1.0 - coverage) * 1000) / 10)
+    }
+    
+    // MARK: - Tactical Screen Canvas Flush (Clears Screen Overlays Without Wiping Vector DB)
+    public func clearScreenCanvasOverlays() {
+        clickPings.removeAll()
+        phoneSwipesList.removeAll()
+        livePhoneTrail.removeAll()
+        activePredictiveIntent = nil
+        toastMessage = "Canvas Overlays Flushed • Telemetry Vectors Preserved"
     }
     
     public func clearHistory() {
