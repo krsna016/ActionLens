@@ -118,7 +118,84 @@ public struct TelemetryMatrixView: View {
         telemetryCard(id: "21", name: "Barometric Pressure", value: String(format: "%.1f hPa", state.barometricPressureHpa), sub: String(format: "Calculated floor altitude: %.1f m", state.barometricAltitudeM), color: ActionLensTheme.cyanAccent, icon: "gauge")
         telemetryCard(id: "22", name: "Ambient Illuminance", value: String(format: "%.0f Lux", state.ambientIlluminanceLux), sub: state.ambientIlluminanceLux < 50 ? "Dark Room Ambient" : "Daylight / Lit Office", color: ActionLensTheme.purpleAccent, icon: "sun.max.fill")
         telemetryCard(id: "23", name: "Proximity Sensor", value: state.proximityDistanceCm < 2.0 ? "Covered / Near Ear" : "Clear (Open Field)", sub: String(format: "Distance: %.1f cm", state.proximityDistanceCm), color: ActionLensTheme.coralAccent, icon: "sensor.tag.radiowaves.forward.fill")
-        telemetryCard(id: "24", name: "Acoustic Decibel Spectrum", value: String(format: "%.1f dBA", state.acousticDecibelDba), sub: "Classification: \(state.acousticAura)", color: ActionLensTheme.mintAccent, icon: "waveform.badge.mic")
+        
+        // Feature 6: Specialized Live Acoustic Decibel Spectrum & Aura Card
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("24")
+                    .font(.system(size: 9, weight: .black, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.mintAccent)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(ActionLensTheme.mintAccent.opacity(0.15))
+                    .cornerRadius(3)
+                
+                Image(systemName: "waveform.badge.mic")
+                    .font(.system(size: 10))
+                    .foregroundColor(ActionLensTheme.mintAccent)
+                
+                Text("Acoustic Decibel Spectrum & Ambient Aura")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(ActionLensTheme.textPrimary)
+                
+                Spacer()
+                
+                Text(manager.liveAcousticSpectrum.roomAcousticAura.uppercased())
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.mintAccent)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(ActionLensTheme.mintAccent.opacity(0.12))
+                    .cornerRadius(3)
+            }
+            
+            HStack(alignment: .bottom, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(format: "%.1f dBA", manager.liveAcousticSpectrum.ambientDbSpl))
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.mintAccent)
+                    Text("Peak: \(Int(manager.liveAcousticSpectrum.peakDbSpl)) dB SPL")
+                        .font(.system(size: 8.5, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.textSecondary)
+                }
+                
+                // Live 8-Bin Frequency Equalizer Graphic
+                HStack(alignment: .bottom, spacing: 3) {
+                    ForEach(0..<manager.liveAcousticSpectrum.spectralBands.count, id: \.self) { idx in
+                        let band = manager.liveAcousticSpectrum.spectralBands[idx]
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(
+                                LinearGradient(
+                                    colors: [ActionLensTheme.cyanAccent, ActionLensTheme.mintAccent],
+                                    startPoint: .bottom,
+                                    endPoint: .top
+                                )
+                            )
+                            .frame(width: 8, height: CGFloat(max(band * 22.0, 3.0)))
+                    }
+                }
+                .frame(height: 22)
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("F0: \(Int(manager.liveAcousticSpectrum.voicePitchF0Hz)) Hz")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.cyanAccent)
+                    Text("Pause: \(Int(manager.liveAcousticSpectrum.speechPauseHesitationMs))ms")
+                        .font(.system(size: 8.5, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.textTertiary)
+                }
+            }
+        }
+        .padding(8)
+        .background(ActionLensTheme.cardBackground)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(ActionLensTheme.border.opacity(0.6), lineWidth: 0.6)
+        )
+        
         telemetryCard(id: "25", name: "CPU Thermal Throttle", value: state.cpuThrottleState, sub: String(format: "Frequency drift: %+.1f MHz", state.coreFrequencyDriftMhz), color: ActionLensTheme.amberAccent, icon: "cpu")
     }
     
@@ -137,6 +214,66 @@ public struct TelemetryMatrixView: View {
     // MARK: - Group 4: Radio-Frequency, Baseband & Spatial Topology (33-40)
     @ViewBuilder
     private func radioGroupView(state: HardwareSensorState) -> some View {
+        // Feature 7: Specialized RF Spatial Mesh & Triangulation Card
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("RF-MESH")
+                    .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.cyanAccent)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(ActionLensTheme.cyanAccent.opacity(0.15))
+                    .cornerRadius(3)
+                
+                Image(systemName: "dot.radiowaves.left.and.right")
+                    .font(.system(size: 10))
+                    .foregroundColor(ActionLensTheme.cyanAccent)
+                
+                Text("RF Spatial Mesh & Proximity Triangulation")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(ActionLensTheme.textPrimary)
+                
+                Spacer()
+                
+                Text(manager.rfSpatialMesh.signalStrengthTier.uppercased())
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(ActionLensTheme.cyanAccent)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(ActionLensTheme.cyanAccent.opacity(0.12))
+                    .cornerRadius(3)
+            }
+            
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(manager.rfSpatialMesh.wifiRssiDbm) dBm")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.cyanAccent)
+                    Text("BSSID: \(manager.rfSpatialMesh.wifiBssid)")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.textSecondary)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("TA: \(manager.rfSpatialMesh.cellularTimingAdvanceRings) Rings (~ \(Int(manager.rfSpatialMesh.estimatedRadialDistanceM))m)")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.coralAccent)
+                    Text("Co-Location: \(Int(manager.rfSpatialMesh.crossDeviceLookalikeDensity * 100))%")
+                        .font(.system(size: 8.5, design: .monospaced))
+                        .foregroundColor(ActionLensTheme.mintAccent)
+                }
+            }
+        }
+        .padding(8)
+        .background(ActionLensTheme.cardBackground)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(ActionLensTheme.border.opacity(0.6), lineWidth: 0.6)
+        )
+        
         telemetryCard(id: "33", name: "Ambient Wi-Fi BSSID", value: state.ambientWifiBssid, sub: "5-10m indoor spatial position key", color: ActionLensTheme.cyanAccent, icon: "wifi")
         telemetryCard(id: "34", name: "Wi-Fi RSSI Strength", value: "\(state.wifiRssiDbm) dBm", sub: "Indoor RF triangulation vector", color: ActionLensTheme.mintAccent, icon: "antenna.radiowaves.left.and.right")
         telemetryCard(id: "35", name: "BLE Proximity Beacons", value: state.bleBeaconUuid, sub: state.bleBeaconMajorMinor, color: ActionLensTheme.purpleAccent, icon: "dot.radiowaves.left.and.right")

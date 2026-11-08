@@ -142,6 +142,108 @@ public struct SpatialHeatPoint: Identifiable, Codable {
     }
 }
 
+// MARK: - Predictive Intent Trajectory Vector (Feature 3)
+public struct PredictiveIntentVector: Identifiable, Codable {
+    public var id: UUID = UUID()
+    public var originX: Double
+    public var originY: Double
+    public var projectedTargetX: Double
+    public var projectedTargetY: Double
+    public var velocityPxPerSec: Double
+    public var intentionAngleDeg: Double
+    public var trajectoryConfidencePct: Double
+    public var leadTimeMs: Double
+    public var targetZoneLabel: String
+    public var timestamp: Date
+    
+    public init(
+        id: UUID = UUID(),
+        originX: Double = 0.5,
+        originY: Double = 0.5,
+        projectedTargetX: Double = 0.5,
+        projectedTargetY: Double = 0.5,
+        velocityPxPerSec: Double = 420.0,
+        intentionAngleDeg: Double = 270.0,
+        trajectoryConfidencePct: Double = 88.5,
+        leadTimeMs: Double = 180.0,
+        targetZoneLabel: String = "Central Content Feed",
+        timestamp: Date = Date()
+    ) {
+        self.id = id
+        self.originX = originX
+        self.originY = originY
+        self.projectedTargetX = projectedTargetX
+        self.projectedTargetY = projectedTargetY
+        self.velocityPxPerSec = velocityPxPerSec
+        self.intentionAngleDeg = intentionAngleDeg
+        self.trajectoryConfidencePct = trajectoryConfidencePct
+        self.leadTimeMs = leadTimeMs
+        self.targetZoneLabel = targetZoneLabel
+        self.timestamp = timestamp
+    }
+}
+
+// MARK: - Live Acoustic Decibel Spectrum & Ambient Aura (Feature 6)
+public struct AcousticSpectrumState: Codable {
+    public var ambientDbSpl: Double = 44.8
+    public var peakDbSpl: Double = 61.2
+    public var roomAcousticAura: String = "Quiet Ambient Studio"
+    public var spectralBands: [Double] = [0.18, 0.42, 0.65, 0.88, 0.54, 0.38, 0.22, 0.14] // 8 Frequency Bins (60Hz to 16kHz)
+    public var voicePitchF0Hz: Double = 132.5
+    public var speechPauseHesitationMs: Double = 340.0
+    
+    public init(
+        ambientDbSpl: Double = 44.8,
+        peakDbSpl: Double = 61.2,
+        roomAcousticAura: String = "Quiet Ambient Studio",
+        spectralBands: [Double] = [0.18, 0.42, 0.65, 0.88, 0.54, 0.38, 0.22, 0.14],
+        voicePitchF0Hz: Double = 132.5,
+        speechPauseHesitationMs: Double = 340.0
+    ) {
+        self.ambientDbSpl = ambientDbSpl
+        self.peakDbSpl = peakDbSpl
+        self.roomAcousticAura = roomAcousticAura
+        self.spectralBands = spectralBands
+        self.voicePitchF0Hz = voicePitchF0Hz
+        self.speechPauseHesitationMs = speechPauseHesitationMs
+    }
+}
+
+// MARK: - RF Spatial Topology & Lookalike Mesh (Feature 7)
+public struct RFSpatialMeshState: Codable {
+    public var wifiBssid: String = "24:4b:fe:8a:12:90"
+    public var wifiRssiDbm: Int = -58
+    public var signalStrengthTier: String = "Room Proximity (2–4m)"
+    public var cellularCgiTac: String = "404-45-7821-12048"
+    public var cellularTimingAdvanceRings: Int = 2
+    public var estimatedRadialDistanceM: Double = 3.4
+    public var bleBeaconUuid: String = "fda50693-a4e2-4fb1-afcf-c6eb07647825"
+    public var bleProximityDistanceM: Double = 1.8
+    public var crossDeviceLookalikeDensity: Double = 0.94
+    
+    public init(
+        wifiBssid: String = "24:4b:fe:8a:12:90",
+        wifiRssiDbm: Int = -58,
+        signalStrengthTier: String = "Room Proximity (2–4m)",
+        cellularCgiTac: String = "404-45-7821-12048",
+        cellularTimingAdvanceRings: Int = 2,
+        estimatedRadialDistanceM: Double = 3.4,
+        bleBeaconUuid: String = "fda50693-a4e2-4fb1-afcf-c6eb07647825",
+        bleProximityDistanceM: Double = 1.8,
+        crossDeviceLookalikeDensity: Double = 0.94
+    ) {
+        self.wifiBssid = wifiBssid
+        self.wifiRssiDbm = wifiRssiDbm
+        self.signalStrengthTier = signalStrengthTier
+        self.cellularCgiTac = cellularCgiTac
+        self.cellularTimingAdvanceRings = cellularTimingAdvanceRings
+        self.estimatedRadialDistanceM = estimatedRadialDistanceM
+        self.bleBeaconUuid = bleBeaconUuid
+        self.bleProximityDistanceM = bleProximityDistanceM
+        self.crossDeviceLookalikeDensity = crossDeviceLookalikeDensity
+    }
+}
+
 // MARK: - Comprehensive 45 Telemetry Vectors Snapshot
 public struct HardwareSensorState: Codable {
     // ── Group 1: Micro-Biometric & Interaction Dynamics (1 - 13) ──

@@ -141,6 +141,23 @@ public struct ClickRadarView: View {
                 }
                 .buttonStyle(.plain)
                 
+                // Predictive Intent Engine Toggle Button (Feature 3)
+                Button(action: {
+                    manager.isIntentPredictionEnabled.toggle()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: manager.isIntentPredictionEnabled ? "target" : "scope")
+                        Text(manager.isIntentPredictionEnabled ? "Intent: ON" : "Intent: OFF")
+                    }
+                    .font(.system(size: 9, weight: manager.isIntentPredictionEnabled ? .bold : .medium, design: .monospaced))
+                    .foregroundColor(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent : ActionLensTheme.textSecondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(manager.isIntentPredictionEnabled ? ActionLensTheme.cyanAccent.opacity(0.18) : Color.white.opacity(0.04))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                
                 if isPhoneCanvas {
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {
@@ -263,6 +280,39 @@ public struct ClickRadarView: View {
                     }
                     .position(x: px, y: py)
                 }
+                
+                // Mac Predictive Momentum Vector (Feature 3)
+                if manager.isIntentPredictionEnabled {
+                    let macPings = manager.clickPings.filter { $0.deviceTarget == .mac }
+                    if macPings.count >= 2 {
+                        let lastPing = macPings[macPings.count - 1]
+                        let prevPing = macPings[macPings.count - 2]
+                        let lx = lastPing.normalizedX * geo.size.width
+                        let ly = lastPing.normalizedY * geo.size.height
+                        let px = prevPing.normalizedX * geo.size.width
+                        let py = prevPing.normalizedY * geo.size.height
+                        let dx = lx - px
+                        let dy = ly - py
+                        let predX = max(10, min(geo.size.width - 10, lx + dx * 0.75))
+                        let predY = max(10, min(geo.size.height - 10, ly + dy * 0.75))
+                        
+                        Path { p in
+                            p.move(to: CGPoint(x: lx, y: ly))
+                            p.addLine(to: CGPoint(x: predX, y: predY))
+                        }
+                        .stroke(ActionLensTheme.cyanAccent, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                        
+                        ZStack {
+                            Circle()
+                                .stroke(ActionLensTheme.cyanAccent, lineWidth: 1)
+                                .frame(width: 14, height: 14)
+                            Circle()
+                                .fill(ActionLensTheme.cyanAccent.opacity(0.4))
+                                .frame(width: 4, height: 4)
+                        }
+                        .position(x: predX, y: predY)
+                    }
+                }
             }
             
             if manager.clickPings.filter({ $0.deviceTarget == .mac }).isEmpty {
@@ -372,6 +422,86 @@ public struct ClickRadarView: View {
                         }
                         .position(x: tipX, y: tipY)
                     }
+                }
+                
+                // Predictive Intent Trajectory Engine (Feature 3)
+                if manager.isIntentPredictionEnabled, let intent = manager.activePredictiveIntent, manager.isPhoneTouching {
+                    let origX = offsetX + CGFloat(intent.originX) * frameW
+                    let origY = offsetY + CGFloat(intent.originY) * frameH
+                    let targX = offsetX + CGFloat(intent.projectedTargetX) * frameW
+                    let targY = offsetY + CGFloat(intent.projectedTargetY) * frameH
+                    
+                    // 1. Biomechanical Intention Fan / Cone
+                    Path { p in
+                        let angle = intent.intentionAngleDeg * .pi / 180.0
+                        let halfSpread = 16.0 * .pi / 180.0
+                        let len = max(sqrt(pow(targX - origX, 2) + pow(targY - origY, 2)), 30.0) * 1.15
+                        let pLeft = CGPoint(x: origX + cos(angle - halfSpread) * len, y: origY + sin(angle - halfSpread) * len)
+                        let pRight = CGPoint(x: origX + cos(angle + halfSpread) * len, y: origY + sin(angle + halfSpread) * len)
+                        
+                        p.move(to: CGPoint(x: origX, y: origY))
+                        p.addLine(to: pLeft)
+                        p.addLine(to: pRight)
+                        p.closeSubpath()
+                    }
+                    .fill(
+                        LinearGradient(
+                            colors: [ActionLensTheme.cyanAccent.opacity(0.24), ActionLensTheme.cyanAccent.opacity(0.02)],
+                            startPoint: .init(x: intent.originX, y: intent.originY),
+                            endPoint: .init(x: intent.projectedTargetX, y: intent.projectedTargetY)
+                        )
+                    )
+                    
+                    // 2. Extrapolated Laser Guidance Vector (Dashed Neon)
+                    Path { p in
+                        p.move(to: CGPoint(x: origX, y: origY))
+                        p.addLine(to: CGPoint(x: targX, y: targY))
+                    }
+                    .stroke(
+                        ActionLensTheme.cyanAccent,
+                        style: StrokeStyle(lineWidth: 1.8, dash: [5, 4])
+                    )
+                    .shadow(color: ActionLensTheme.cyanAccent.opacity(0.8), radius: 5)
+                    
+                    // 3. Projected Target Reticle & Semantic HUD
+                    ZStack {
+                        Circle()
+                            .stroke(ActionLensTheme.cyanAccent, lineWidth: 1.5)
+                            .frame(width: 22, height: 22)
+                        
+                        Circle()
+                            .stroke(ActionLensTheme.mintAccent.opacity(0.6), lineWidth: 1)
+                            .frame(width: 32, height: 32)
+                        
+                        Rectangle()
+                            .fill(ActionLensTheme.cyanAccent)
+                            .frame(width: 1.5, height: 10)
+                        
+                        Rectangle()
+                            .fill(ActionLensTheme.cyanAccent)
+                            .frame(width: 10, height: 1.5)
+                        
+                        // HUD Target Badge
+                        VStack(spacing: 2) {
+                            Text("180ms LEAD • \(Int(intent.trajectoryConfidencePct))% CONF")
+                                .font(.system(size: 7, weight: .black, design: .monospaced))
+                                .foregroundColor(ActionLensTheme.cyanAccent)
+                            
+                            Text(intent.targetZoneLabel.uppercased())
+                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Color.black.opacity(0.85))
+                        .cornerRadius(3)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(ActionLensTheme.cyanAccent.opacity(0.6), lineWidth: 0.6)
+                        )
+                        .offset(y: targY > (offsetY + frameH * 0.75) ? -24 : 24)
+                    }
+                    .position(x: targX, y: targY)
                 }
                 
                 // Phone Swipes (Dynamically toggled between Polyline Curve and Linear Vector styles)
