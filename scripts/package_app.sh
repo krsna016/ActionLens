@@ -20,8 +20,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$BIN_DIR"
 cp -f "$APP_BIN" "$APP/Contents/MacOS/ActionLens"
 chmod +x "$APP/Contents/MacOS/ActionLens"
 
-# Install Info.plist
+# Install Info.plist & App Icon
 cp -f "$ROOT/Info.plist" "$APP/Contents/Info.plist"
+if [[ -f "$ROOT/Resources/AppIcon.icns" ]]; then
+    cp -f "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 # Install CLI Binary
 cp -f "$CLI_BIN" "$BIN_DIR/actionlens"
